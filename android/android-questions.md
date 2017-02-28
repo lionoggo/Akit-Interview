@@ -467,11 +467,13 @@ NDK集成了交叉编译器，并提供了相应的mk文件和隔离cpu、平台
 4. 编译生成动态链接so文件**
 5. Java中调用Sysytem.load方法把刚才的so库加载进来，就可以调用native方法了
 ## 如何通过JNI传递String对象
-Java的String和C++的string是不能对等起来的，所以当我们拿到.h文件下面的jstring对象，会做一次转换我们把jstring转换为C下面的char*类型， 获取值
+Java的String和C++的string是不能对等起来的，所以当我们拿到.h文件下面的jstring对象，会做一次转换我们把jstring转换为C下面的char*类型， 获取值:
+
  ```java
  constchar* str; 
  str = env->GetStringUTFChars(prompt,false);
  ```
+
 赋予值
 ```java
 	char* tmpstr ="return string succeeded"; 
@@ -532,8 +534,7 @@ Log
 6. 集合对象未清理,如无用时没有释放对象的引用
 7. 在Activity中使用非静态的内部类，并开启一个长时间运行的线程，因为内部类持有Activity的引用，会导致Activity本来可以被gc时却长期得不到回收
 
-## 哪些情况下发生OOM
-
+进一步解释:
 
 * **类的静态变量持有大数据对象** 静态变量长期维持到大数据对象的引用，阻止垃圾回收。
 
@@ -553,7 +554,7 @@ Log
 参见:http://www.jcodecraeer.com/a/anzhuokaifa/androidkaifa/2015/0920/3478.html
 
 
-## 如何避免OOM
+## 如何避免内存溢出
 
 **1. 使用更加轻量的数据结构** 例如，我们可以考虑使用ArrayMap/SparseArray而不是HashMap等传统数据结构。通常的HashMap的实现方式更加消耗内存，因为它需要一个额外的实例对象来记录Mapping操作。另外，SparseArray更加高效，在于他们避免了对key与value的自动装箱（autoboxing），并且避免了装箱后的解箱。
 
