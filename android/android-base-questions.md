@@ -12,8 +12,46 @@
 
 ### `onSaveInstanceState()`的工作原理是什么?
 
+### 简述Activity任务栈
 
-### 请介绍下Activity中的luancherMode
+为了对应用中的Activity进行管理,Google采用了栈结构(后进先出)来管理Activity,即所谓的任务栈.默认情况下,每启动一个应用,系统便会为其创建一个包名为名的任务栈.
+
+默认情况下，一个Activity启动另一个Activity时，两个Activity是放置在同一个task中的，后者被压入前者所在的task栈，当用户按下后退键，后者从task被弹出，前者又显示在幕前，特别是启动其他应用中的Activity时，两个Activity对用户来说就好像是属于同一个应用；系统task和task之间是互相独立的，当我们运行一个应用时，按下Home键回到主屏，启动另一个应用，这个过程中，之前的task被转移到后台，新的task被转移到前台，其根Activity也会显示到幕前，过了一会之后，在此按下Home键回到主屏，再选择之前的应用，之前的task会被转移到前台，系统仍然保留着task内的所有Activity实例，而那个新的task会被转移到后台，如果这时用户再做后退等动作，就是针对该task内部进行操作了。
+
+处于栈顶的Activity为当前活动栈,处在焦点状态.当按下Back键或者返回按钮时,栈内Activity会依次出栈,并调用其onDestory().当所有的Activity被销毁后,系统会回收该栈.
+
+
+
+### 请介绍下Activity中的luancheMode
+
+LancheMode即所谓的启动模式,系统会根据该模式来控制Activity打开时对任务栈的影响.该选项有以下四个值选项:standard,singleTop,singleTask,singleInstance.其含义如下:
+
+1、standard：默认模式：每次启动都会创建一个新的activity对象，放到目标任务栈中
+
+2、singleTop：判断当前的任务栈顶是否存在相同的activity对象，如果存在，则直接使用，如果不存在，那么创建新的activity对象放入栈中
+
+3、singleTask：在任务栈中会判断是否存在相同的activity，如果存在，那么会清除该activity之上的其他activity对象显示，如果不存在，则会创建一个新的activity放入栈顶
+
+4、singleIntance：会在一个新的任务栈中创建activity，并且该任务栈种只允许存在一个activity实例，其他调用该activity的组件会直接使用该任务栈种的activity对象
+
+控制任务栈的方式
+
+方法一：
+使用android:launchMode="standard|singleInstance|single Task|singleTop"来控制Acivity任务栈。
+方法二：
+Intent Flags：
+
+```java
+Intent intent=new Intent();
+intent.setClass(MainActivity.this, MainActivity2.class);
+intent.addFlags(Intent. FLAG_ACTIVITY_CLEAR_TOP);
+startActivity(intent);
+```
+
+Flags有很多，比如：
+Intent.FLAG_ACTIVITY_NEW_TASK   相当于singleTask
+Intent. FLAG_ACTIVITY_CLEAR_TOP   相当于singleTop
+
 
 ### 请介绍下LaunchMode的使用场景
 
@@ -38,7 +76,13 @@
 
 ### 在补间动画执行的过程中,调用其invalidate()方法会出现什么现象?为什么?
 
+### 动画的两种实现:setX()和setTranslation的区别?
+
+
+
 ### SurfaceView与View的区别?
+
+### 请简单讲述为什么非UI线程不能更新View.
 
 ### 在哪些场景下需要使用SurfaceView?
 
@@ -53,6 +97,10 @@
 ### 如何实现一个局部更新的ListView
 
 ### ListView中的ViewHolder为什么要设计成静态内部类？
+
+###ListView跟RecyleView的区别?
+
+###请例举Android中常用布局类型，并简述其用法以及排版效率
 
 
 
@@ -82,7 +130,22 @@
 
 ### 如何保证Service在后台不被kill?
 
+- 提交进程的优先级,见底进程被杀死的概率.
 
+  方法一 :监控手机锁屏解锁事件，在屏幕锁屏时启动1个像素的 Activity，在用户解锁时将 Activity 销毁掉。
+  方法二：启动前台service。
+  方法三：提升service优先级：
+  在AndroidManifest.xml文件中对于intent-filter可以通过android:priority = "1000"这个属性设置最高优先级，1000是最高值，如果数字越小则优先级越低，同时适用于广播。
+
+- 在进程被杀死后，进行拉活
+  方法一：注册高频率广播接收器，唤起进程。如网络变化，解锁屏幕，开机等
+  方法二：双进程相互唤起,比较有效的方法是两个Service进行远程绑定.
+  方法三：依靠系统唤起。
+  方法四：onDestroy方法里重启service：service +broadcast 方式，就是当service走ondestory的时候，发送一个自定义的广播，当收到广播的时候，重新启动service
+
+- 根据终端厂家不同,接入相应的推送.如在小米手机接入小米推送,在华为手机接入华为推送
+
+- 如果是做系统开发这,那就直接申请加入白名单.
 
 ## Broadcast系列
 
@@ -186,12 +249,12 @@
 
 ## 系统机制
 
-### Linux中常见的进程通信方式有哪些呢?Android呢?
+### 1. Linux中常见的进程通信方式有哪些呢?Android呢?
 
-### 什么时AIDL?使用AIDL的基本流程是什么?
+### 2. 什么时AIDL?使用AIDL的基本流程是什么?
 
 
-### 如何实现跨进程回调?
+### 3. 如何实现跨进程回调?
 
 ### 你了解NDK开发么?简单说说开发流程(eclipse和AS中)
 
@@ -223,7 +286,34 @@
 
 ###现在有两个应用A和B,先打开A应用,假设依次打开其A-Page1,A-Page2,A-Page3三个Activity,此时回到桌面,打开B应用,假设由于B应用非常大,促使系统杀死了A应用,此时回到桌面,点击A应用图标,请问出现什么情况?
 
-### 假设A类存在一个静态变量,在变量被赋值后,该应用进程被杀死,请问应用重启后该变量的状态?
+###假设A类存在一个静态变量,在变量被赋值后,该应用进程被杀死,请问应用重启后该变量的状态?
+
+### Android应用如何开进程?最多可以开多少个进程?
+
+通过配置android:process即可实现多进程.基于Linux内核实现的Android系统并没有限制一个应用最多可以开多少个进程,这些参数都是可以配置的,可以通过`adb shell ulimit -a`查看:
+
+```shell
+time(cpu-seconds)    unlimited
+file(blocks)         unlimited
+coredump(blocks)     0
+data(KiB)            unlimited
+stack(KiB)           8192
+lockedmem(KiB)       unlimited
+nofiles(descriptors) 1024
+processes            3619
+sigpending           3619
+msgqueue(bytes)      819200
+maxnice              40
+maxrtprio            0
+resident-set(KiB)    unlimited
+address-space(KiB)   unlimited
+```
+
+
+
+### 如何追踪某个对象的回收情况?
+
+
 
 
 
@@ -247,6 +337,8 @@
 ### 如何制造一个OOM的场景？
 
 ### 如何避免OOM？
+
+### 如何进行单元测试?
 
 
 

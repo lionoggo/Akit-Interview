@@ -1,4 +1,4 @@
-﻿# Java面试基础
+#Java面试基础
 
 
 
@@ -33,7 +33,7 @@
  1. 为其他子类提供一个公共的类型
  2. 封装子类中重复定义的内容
  3. 定义抽象方法,子类虽然有不同的实现,但是定义时一致的
- 
+
 ## 接口和抽象类的区别
 
 |比较|抽象类|接口|
@@ -187,6 +187,10 @@ public class Test{
 ## final,finalize和finally的不同之处
 final 是一个修饰符，可以修饰变量、方法和类。如果 final 修饰变量，意味着该变量的值在初始化后不能被改变。finalize 方法是在对象被回收之前调用的方法，给对象自己最后一个复活的机会，但是什么时候调用 finalize 没有保证。finally 是一个关键字，与 try 和 catch 一起用于异常的处理。finally 块一定会被执行，无论在 try 块中是否有发生异常。
 
+### 被final修饰的对象,能否调用对象修改属性的方法?
+
+
+
 ## clone()是哪个类的方法?
 java.lang.Cloneable 是一个标示性接口，不包含任何方法，clone 方法在 object 类中定义。并且需要知道 clone() 方法是一个本地方法，这意味着它是由 c 或 c++ 或 其他本地语言实现的。
 
@@ -236,7 +240,6 @@ final也是很多面试喜欢问的地方,能回答下以下三点就不错了:
 
 
 
-
 ----------
 
 
@@ -261,6 +264,10 @@ Integer是int的包装类型,在拆箱和装箱中,二者自动转换.int是基�
 ## int 和Integer谁占用的内存更多?
 Integer 对象会占用更多的内存。Integer是一个对象，需要存储对象的元数据。但是 int 是一个原始类型的数据，所以占用的空间更少。
 
+
+
+### int,long的取值范围以及BigDecimal.
+
 ## String,StringBuffer和StringBuilder区别
 String是字符串常量,final修饰;StringBuffer字符串变量(线程安全);
 StringBuilder 字符串变量(线程不安全).
@@ -273,9 +280,11 @@ StringBuffer是对对象本身操作,而不是产生新的对象,因此在有大
 
 但是需要注意现在JVM会对String拼接做一定的优化:
 `String s=“This is only ”+”simple”+”test”`会被虚拟机直接优化成`String s=“This is only simple test”`,此时就不存在拼接过程.
- 
+
 ### StringBuffer和StringBuilder
 StringBuffer是线程安全的可变字符串,其内部实现是可变数组.StringBuilder是jdk 1.5新增的,其功能和StringBuffer类似,但是非线程安全.因此,在没有多线程问题的前提下,使用StringBuilder会取得更好的性能.
+
+
 
 
 
@@ -290,7 +299,6 @@ StringBuffer是线程安全的可变字符串,其内部实现是可变数组.Str
 
 ## 可以将int强转为byte类型么?会产生什么问题?
 我们可以做强制转换，但是Java中int是32位的而byte是8 位的，所以,如果强制转化int类型的高24位将会被丢弃，byte 类型的范围是从-128到128
-
 
 ----------
 
@@ -393,7 +401,7 @@ wait()方法和notify()/notifyAll()方法在放弃对象监视器的时候的区
  - sleep()来自Thread类，和wait()来自Object类.调用sleep()方法的过程中，线程不会释放对象锁。而 调用 wait 方法线程会释放对象锁
  - sleep()睡眠后不出让系统资源，wait让其他线程可以占用CPU
  - sleep(milliseconds)需要指定一个睡眠时间，时间一到会自动唤醒.而wait()需要配合notify()或者notifyAll()使用
- 
+
 ## 为什么wait,nofity和nofityAll这些方法不放在Thread类当中
 一个很明显的原因是JAVA提供的锁是对象级的而不是线程级的，每个对象都有锁，通过线程获得。如果线程需要等待某些锁那么调用对象中的wait()方法就有意义了。如果wait()方法定义在Thread类中，线程正在等待的是哪个锁就不明显了。简单的说，由于wait，notify和notifyAll都是锁级别的操作，所以把他们定义在Object类中因为锁属于对象。
 
@@ -548,7 +556,7 @@ CAS，全称为Compare and Swap，即比较-替换。假设有三个操作数：
 悲观锁：悲观锁认为竞争总是会发生，因此每次对某资源进行操作时，都会持有一个独占的锁，就像synchronized，不管三七二十一，直接上了锁就操作资源了。
 
 
-## ConcurrentHashMap的并发度是什么?
+## ConcurrentHashMap的并发度是什么(或者说分的段数)?
 ConcurrentHashMap的并发度就是segment的大小，默认为16，这意味着最多同时可以有16条线程操作ConcurrentHashMap，这也是ConcurrentHashMap对Hashtable的最大优势，任何情况下，Hashtable能同时有两条线程获取Hashtable中的数据吗？
 
 ## ConcurrentHashMap的工作原理
@@ -566,7 +574,7 @@ ConcurrentHashMap是线程安全的，但是与Hashtablea相比，实现线程�
  - CyclicBarrier的某个线程运行到某个点上之后，该线程即停止运行，直到所有的线程都到达了这个点，所有线程才重新运行；CountDownLatch则不是，某线程运行到某个点上之后，只是给某个数值-1而已，该线程继续运行
  - CyclicBarrier只能唤起一个任务，CountDownLatch可以唤起多个任务
  - CyclicBarrier可重用，CountDownLatch不可重用，计数值为0该CountDownLatch就不可再用了
- 
+
 ## java中的++操作符线程安全么?
 不是线程安全的操作。它涉及到多个指令，如读取变量值，增加，然后存储回内存，这个过程可能会出现多个线程交差
 
@@ -591,7 +599,6 @@ Java 中可以创建 volatile类型数组，不过只是一个指向数组的引
 
 ## volatile类型变量提供什么保证?
 volatile 主要有两方面的作用:1.避免指令重排2.可见性保证.例如，JVM 或者 JIT为了获得更好的性能会对语句重排序，但是 volatile 类型变量即使在没有同步块的情况下赋值也不会与其他语句重排序。 volatile 提供 happens-before 的保证，确保一个线程的修改能对其他线程是可见的。某些情况下，volatile 还能提供原子性，如读 64 位数据类型，像 long 和 double 都不是原子的(低32位和高32位)，但 volatile 类型的 double 和 long 就是原子的.
-
 
 ----------
 #关于集合
@@ -696,15 +703,25 @@ throw用于主动抛出java.lang.Throwable 类的一个实例化对象，意思�
 而throws 的作用是作为方法声明和签名的一部分，方法被抛出相应的异常以便调用者能处理。Java 中，任何未处理的受检查异常强制在 throws 子句中声明。
 
 
-----------
 
-## 关于序列化
+##关于序列化
 
 ## Java 中，Serializable 与 Externalizable 的区别
 Serializable 接口是一个序列化 Java 类的接口，以便于它们可以在网络上传输或者可以将它们的状态保存在磁盘上，是 JVM 内嵌的默认序列化方式，成本高、脆弱而且不安全。Externalizable 允许你控制整个序列化过程，指定特定的二进制格式，增加安全机制。
 
 
-----------
+
+## 反射与注解
+
+### 简单述说实现注解的流程?
+
+### 动态注解和编译时注解有什么区别?
+
+### 反射的使用场景?为什么说反射耗性能?
+
+
+
+
 
 #关于JVM
 
@@ -727,11 +744,14 @@ VM 中堆和栈属于不同的内存区域，使用目的也不同。栈常用�
  5. 局部变量: 由声明在某方法，或某代码段里（比如for循环），执行到它的时候在栈中开辟内存，当局部变量一但脱离作用域，内存立即释放
 
 
-
 ----------
 
 
+
+
+
 #其他
+
 ## java当中采用的是大端还是小端?
 
 ## XML解析的几种方式和特点
@@ -740,7 +760,7 @@ DOM,SAX,PULL三种解析方式:
  - DOM:消耗内存：先把xml文档都读到内存中，然后再用DOM API来访问树形结构，并获取数据。这个写起来很简单，但是很消耗内存。要是数据过大，手机不够牛逼，可能手机直接死机
  - SAX:解析效率高，占用内存少，基于事件驱动的：更加简单地说就是对文档进行顺序扫描，当扫描到文档(document)开始与结束、元素(element)开始与结束、文档(document)结束等地方时通知事件处理函数，由事件处理函数做相应动作，然后继续同样的扫描，直至文档结束。
  - PULL:与 SAX 类似，也是基于事件驱动，我们可以调用它的next（）方法，来获取下一个解析事件（就是开始文档，结束文档，开始标签，结束标签），当处于某个元素时可以调用XmlPullParser的getAttributte()方法来获取属性的值，也可调用它的nextText()获取本节点的值。
- 
+
 
 
 ## JDK 1.7特性
@@ -761,7 +781,7 @@ Date 与 Time API，最终，有一个稳定、简单的日期和时间库可供
  - 使用PreparedStatement来避免SQL漏洞
  - 使用数据连接池
  - 通过列名来获取结果集
- 
+
 ## IO操作最佳实践
 1. 使用有缓冲的IO类,不要单独读取字节或字符
 2. 使用NIO和NIO 2或者AIO,而非BIO
