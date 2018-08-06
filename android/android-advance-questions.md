@@ -48,6 +48,51 @@
 
 ###View是如何被绘制到屏幕上的
 
+### Android权限管理
+
+### Android类加载器
+
+Android中的虚拟机读取Dex文件,Dex本质就是对Class文件进一步压缩调整,优化,最终为每个API生成class.dex(没有开启多Dex前提下).目前Android主要有以下几种加载器:
+
+![image-20180806152446643](http://pbj0kpudr.bkt.clouddn.com/blog/2018-08-06-072446.png)
+
+其中我们常见的是:DexClassLoader和PathClassLoader.两者都是BaseDexClassLoader的子类.区别在于调用父类构造器时,DexClassLoader会传入optimizedDirectory参数.该参数指定的路径用来缓存Dex的文件(该路径通常为应用的应用的私有目录,以避免注入攻击).PathClassLoader中该参数为NULL,此时就会使用默认的optimizedDirectory路径`/data/dalvik-cache`,换句话说,两者只是对BaseDexClassLoader传入的构造参数不同而已,从用途上来讲,PathClassLoader用来加载Android系统类和app应用,DexClassLoader用来动态加载包含class.dex的jar/apk文件.虽然我们都知道Dalvik不能识别jar,但在BaseClassLoader中会对jar/zip/apk/dex文件生成一个对应的dex文件,因此最终都是处理的Dex文件.
+
+```java
+public class DexClassLoader extends BaseDexClassLoader {
+    //dexPath:被解压apk路径;optimizedDirectory:apk被解压后其中dex文件的存储路径
+    //librarySearchPath:so库搜索路径;parent:父类加载器
+    public DexClassLoader(String dexPath, String optimizedDirectory, String librarySearchPath, ClassLoader parent) {
+        super((String)null, (File)null, (String)null, (ClassLoader)null);
+        throw new RuntimeException("Stub!");
+    }
+}
+```
+
+```java
+public class PathClassLoader extends BaseDexClassLoader {
+    public PathClassLoader(String dexPath, ClassLoader parent) {
+        super((String)null, (File)null, (String)null, (ClassLoader)null);
+        throw new RuntimeException("Stub!");
+    }
+
+    public PathClassLoader(String dexPath, String librarySearchPath, ClassLoader parent) {
+        super((String)null, (File)null, (String)null, (ClassLoader)null);
+        throw new RuntimeException("Stub!");
+    }
+}
+```
+
+注意:
+
+- Android应用启动时,默认父构造器时PathClassLoader,且其父加载器是BootClassLoader.BootClassLoader是PathClassLoader内部类,无法被重写.
+- InMemoryDexClassLoader是API 26新增的类加载器
+- DelegateLastClassLoader是API 27后新增
+
+-------
+
+
+
 ## 数据结构与设计
 
 ### ArrayMap的实现原理是什么?
@@ -68,6 +113,8 @@
 
 ### 单利模式如何修改数据?
 
+-----
+
 ## 开源框架
 
 ### 网络框架
@@ -81,6 +128,12 @@
 ### 图片加载
 
 #### Gide原理
+
+### Glide加载原理
+
+### 缓存方案与LRU算法
+
+### Glide加载长图与图片背景色
 
 ### 数据库框架
 
