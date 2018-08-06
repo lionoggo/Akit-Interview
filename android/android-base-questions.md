@@ -118,9 +118,42 @@ Intent. FLAG_ACTIVITY_CLEAR_TOP   相当于singleTop
 
 ## Service系列
 
-### 谈谈Service的生命周期
-
 ### 启动Service的两种方式以及区别是什么?
+
+Service存在两种启动方式:startService和bindService.通过startService启动的Service,其生命周期和调用者不相关;通过bindService启动的Service其生命和调用者一致.
+
+![image-20180806163026754](http://pbj0kpudr.bkt.clouddn.com/blog/2018-08-06-083027.png)
+
+
+ ### 谈谈Service的生命周期
+
+先来看以**startService**方式启动Service时的生命周期.该种方式启动的Service会一直运行下去(不考虑系统杀死的情况),必须显式的调用Context.stopService或Service内部调用stopSelf来停止该Service.
+
+
+
+- onCreate:startService时,如果对应的Service未处于运行状态,则会执行onCreate进行Service初始化操作.
+- onStartCommand:startService时,如果Service已经处于运行状态,则会直接执行该方法;否则会先调用onCreate,然后再执行.该方法的返回值决定改Service被系统销毁之后的重建行为.
+- onDestroy:Service被销毁时将会调用该方法.
+
+再来看以**bindService**进行绑定的Service的生命周期.
+
+- onCreaqte:bindService时如果Service未处于运行状态,同样会执行该方法进行Service创建和初始化操作.
+- onBind:onCreate执行成功后,会继续执行onBind方法,需要返回相应的IBinder对象给调用方.
+- onUnbind:调用方调用该方法来解绑Service对象,断开调用方和Service之间的绑定关系
+- onDestroy:onUnbind执行后,onDestroy方法会被调用
+
+### onStartCommand返回值解释
+
+当Android系统内存吃紧时,可能会销毁当前正在运行的某些Service,将来在内存充足的时
+候可以重建Service.其重建行为依赖于Service中`onStartCommand`方法的返回值:
+
+- START_CONTINUATION_MASK
+- START_STICKY_COMPATIBILITY:是对START_STICKY进行兼容的版本,不保证被杀后一定能重建
+- START_STICKY:Service被杀死后,保留Service为开始状态,在系统内存充足后会重建该Service,并调用onStartCommand方法,不过此时Intent为null
+- START_NOT_STICKY:Service被杀死后,在系统内存充足后也不会重建该Service
+- START_TASK_REMOVED_COMPLETE
+- START_FLAG_REDELIVERY:Service被杀死时会保存最后接受到的Intent,并在重建时调用onStartCommand,并将该Intent传入
+- START_FLAG_RETRY
 
 ### IntentService的用途是什么?简述其工作原理.
 
