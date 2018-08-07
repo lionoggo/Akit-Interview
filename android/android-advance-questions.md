@@ -1,4 +1,4 @@
-# Android高级
+Android高级
 
 ## 系统原理
 
@@ -49,6 +49,32 @@
 ###View是如何被绘制到屏幕上的
 
 ### Android权限管理
+
+
+
+### Android打包原理
+
+所谓打包就是将工程变为apk的过程.对于Android APK而言,主要由两部分构成:代码文件和资源文件.因此Android的项目的打包过程也就基本分为对两类资源的处理过程.使用V1签名和V2的签名的的打包流程稍有不同,我们以V1签名为例来简述打包流程:
+
+![image-20180807113012986](http://pbj0kpudr.bkt.clouddn.com/blog/2018-08-07-033013.png)
+
+1. 通过AAPT(Android Studio3.0后默认使用AAPT2)工具进行资源(AndroidMainifest.xml,各种xml资源等)处理,该过程生成我们常见的R.java和被处理过测资源文件
+2. 通过aidl工具处理aidl文件,生成相应的java文件
+3. javac编译工项目源码,生成class文件
+4. 通过dex工具处理所有的class文件,将class字节码转为Dalvik字节码,进行压缩等,最终生成Dex文件
+5. 通过apkbuilder将资源文件,dex文件进行处理,生成未签名的APK文件
+6. 使用Jarsigner工具对该APK进行
+7. 使用zipalign对签名过的APK文件进行对齐操作
+
+
+
+Android 7.0后新增了V2签名,其签名由apksigner工具完成,其大概流程非常类似上述:
+
+![image-20180807113823444](http://pbj0kpudr.bkt.clouddn.com/blog/2018-08-07-033823.png)
+
+由于V2签名机制改变,apk的对齐被移到签名之前.即现在是先进行对齐操作然后才会使用apksigner进行签名.
+
+
 
 ### Android类加载器
 
