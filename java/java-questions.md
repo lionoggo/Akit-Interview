@@ -875,18 +875,23 @@ volatile 主要有两方面的作用:
 
 ## Java中的集合及其继承关系
 关于集合的体系是每个人都应该烂熟于心的,尤其是对我们经常使用的List,Map的原理更该如此.这里我们看这张图即可:
-![image-20181023213540518](https://i.imgur.com/tZ3sBUL.png)
+![image-20181024120943625](https://i.imgur.com/YlV4qvc.png)
 
 更多内容可见[集合类总结](http://write.blog.csdn.net/postedit/40826423)
 
 ## poll()方法和remove()方法区别?
 poll()和 remove()都是从队列中取出一个元素,但是 poll() 在获取元素失败的时候会返回空,但是 remove() 失败的时候会抛出异常.
 
+## LinkedHashMap和HashMap的区别?
+
+LinkedHashMap也是一个HashMap,通过维护一个额外的双向链表保证了迭代顺序,该迭代顺序可以是插入顺序,也可以是访问顺序.因此，根据链表中元素的顺序可以将LinkedHashMap分为:**保持插入顺序的LinkedHashMap** 和 **保持访问顺序的LinkedHashMap**,默认实现是按插入顺序排序的.
+
 ## LinkedHashMap和PriorityQueue的区别
+
 PriorityQueue是一个优先级队列.保证最高或者最低优先级的的元素总是在队列头部.但是 LinkedHashMap维持的顺序是元素插入的顺序.当遍历一个PriorityQueue时,没有任何顺序保证,但是 LinkedHashMap 课保证遍历顺序是元素插入的顺序.
 
 ## WeakHashMap与HashMap的区别是什么?
-WeakHashMap 的工作与正常的 HashMap 类似.但是使用弱引用作为 key,意思就是当key对象没有任何引用时,key/value 将会被回收.
+WeakHashMap的工作与正常的 HashMap 类似.但是使用弱引用作为 key,意思就是当key对象没有任何引用时,key/value 将会被回收.
 
 ## ArrayList和LinkedList的区别?
 最明显的区别是 ArrrayList底层的数据结构是数组,支持随机访问,而 LinkedList 的底层数据结构是**双向循环链表**，不支持随机访问.使用下标访问一个元素，ArrayList 的时间复杂度是 O(1),而 LinkedList 是O(n).
@@ -942,8 +947,111 @@ HashMap是基于哈希表的Map接口的非同步实现,此实现提供所有可
 
 需要注意Jdk 1.8中对HashMap的实现做了优化,当链表中的节点数据超过八个之后,该链表会转为红黑树来提高查询效率,从原来的O(n)到O(logn)
 
+## LinkedHashMap的实现原理?
+
+LinkedHashMap的实现原理和HashMap并没有本质区别,下图中除去红色的虚连接线,其结构就是典型的HashMap.
+
+![image-20181024121753568](https://i.imgur.com/TqdtOHK.png)
+
+和HashMap的不同的是,其Entry节点中,增加了两个指针:befor和after,用来维护双向链表结构.
+
+![image-20181024122059677](https://i.imgur.com/5MHyA71.png)
+
+## 如何利用LinkedHashMap实现LRU缓存?
+
+LRU是Least Recently Used 的缩写,即"最近最少使用".简单的说就是缓存一定量的数据,当超过设定的阈值时就把一些过期的数据删除掉.比如我们缓存1000条数据,当数据小于1000时可以随意添加,当超过1000时就需要把新的数据添加进来,同时要把过期数据删除,以确保我们最大缓存1000条.那怎么确定删除哪条过期数据呢?采用LRU算法实现的话就是将最老的数据删掉.
+
+LinkedHashMap自身已经实现了顺序存储,默认情况下是按照元素的添加顺序存储,也可以启用按照访问顺序存储:即最近读取的数据放在最前面,最早读取的数据放在最后面.然后它还有一个判断是否删除最老数据的方法,默认是返回false,即不删除数据,我们使用LinkedHashMap实现LRU缓存的方法就是对LinkedHashMap实现简单的扩展,以下是简单实现:
+
+```java
+
+class LRUCache<K,V> extends LinkedHashMap<K,V>{
+	private int capacity;
+	private static final long serialVersionUID = 1L;
+
+	LRUCache(int capacity){
+		super(16,0.75f,true);
+		this.capacity=capacity;
+	}
+    
+	@Override
+	public boolean removeEldestEntry(Map.Entry<K, V> eldest){ 
+		return size()>capacity;
+	}  
+}
+```
+
+## ArrayList扩容算法?
+
+具体可见ArrayList实现:
+
+```java
+private void grow(int minCapacity) {
+        // overflow-conscious code
+        int oldCapacity = elementData.length;
+        int newCapacity = oldCapacity + (oldCapacity >> 1);
+        if (newCapacity - minCapacity < 0)
+            newCapacity = minCapacity;
+        if (newCapacity - MAX_ARRAY_SIZE > 0)
+            newCapacity = hugeCapacity(minCapacity);
+        // minCapacity is usually close to size, so this is a win:
+        elementData = Arrays.copyOf(elementData, newCapacity);
+    }
+
+    private static int hugeCapacity(int minCapacity) {
+        if (minCapacity < 0) // overflow
+            throw new OutOfMemoryError();
+        return (minCapacity > MAX_ARRAY_SIZE) ?
+            Integer.MAX_VALUE :
+            MAX_ARRAY_SIZE;
+    }
+```
+
+通过代码看出int newCapacity = oldCapacity + (oldCapacity >> 1),即容量每次扩增为原来的1.5倍.
+
+## Vector扩容算法?
+
+具体可见其实现:
+
+```java
+private void grow(int minCapacity) {
+        // overflow-conscious code
+        int oldCapacity = elementData.length;
+        int newCapacity = oldCapacity + ((capacityIncrement > 0) ?
+                                         capacityIncrement : oldCapacity);
+        if (newCapacity - minCapacity < 0)
+            newCapacity = minCapacity;
+        if (newCapacity - MAX_ARRAY_SIZE > 0)
+            newCapacity = hugeCapacity(minCapacity);
+        elementData = Arrays.copyOf(elementData, newCapacity);
+    }
+
+    private static int hugeCapacity(int minCapacity) {
+        if (minCapacity < 0) // overflow
+            throw new OutOfMemoryError();
+        return (minCapacity > MAX_ARRAY_SIZE) ?
+            Integer.MAX_VALUE :
+            MAX_ARRAY_SIZE;
+    }
+
+```
+
+默认情况下,capacityIncrement为0,此时newCapacity=oldCapacity+oldCapacity,即容量扩增为原来的2倍.如果已经设置了capacityIncrement,此时newCapacity=oldCapacity+capacityIncrement.
+
+## 简单说说 JDK1.7 中 HashMap 什么情况下会发生扩容？如何扩容？
+
+HashMap 中默认的负载因子为 0.75,默认情况下第一次扩容阀值是 12(16 * 0.75),故第一次存储第13个键值对时就会触发扩容机制变为原来数组长度的2倍,以后每次扩容都类似计算机制.
+
+![image-20181024125053256](https://i.imgur.com/jDiNG6m.png)
+
+JDK 1,8在1.7的基础上做了优化,不需要像JDK1.7的实现那样在扩容后重新计算hash,只需要看看原来的hash值新增的那个bit是1还是0就好了:是0的话索引没变,是1的话索引变成"原索引+oldCap",即扩容之前的索引值+扩容之前的容量.比如起始时,容量为16,元素计算后的索引值index为5,那么容量在由16扩容到32之后,其index= 5+16,即21,如下所示:
+
+![image-20181024130306810](https://i.imgur.com/RCaliUr.png)
+
+
 
 ## 你了解Fail-Fast机制吗
+
 Fail-Fast即我们常说的快速失败,更多内容参看[fail-fast机制](http://blog.csdn.net/chenssy/article/details/38151189)
 
 ## Fail-fast和Fail-safe有什么区别
