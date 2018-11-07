@@ -419,3 +419,188 @@ class Solution {
 }
 ```
 
+## 数组的度
+
+给定一个非空且只包含非负数的整数数组 `nums`, 数组的度的定义是指数组里任一元素出现频数的最大值。
+
+你的任务是找到与 `nums` 拥有相同大小的度的最短连续子数组，返回其长度。
+
+**示例 1:**
+
+```
+输入: [1, 2, 2, 3, 1]
+输出: 2
+解释: 
+输入数组的度是2，因为元素1和2的出现频数最大，均为2.
+连续子数组里面拥有相同度的有如下所示:
+[1, 2, 2, 3, 1], [1, 2, 2, 3], [2, 2, 3, 1], [1, 2, 2], [2, 2, 3], [2, 2]
+最短连续子数组[2, 2]的长度为2，所以返回2.
+```
+
+**示例 2:**
+
+```
+输入: [1,2,2,3,1,4,2]
+输出: 6
+```
+
+**注意:**
+
+- `nums.length` 在1到50,000区间范围内。
+- `nums[i]` 是一个在0到49,999范围内的整数
+
+解答思路:通过上述描述不难发现整个过程如下分三步： 
+
+1. 找到数组的度（即最大出现次数） 
+2. 找到和数组的度相同的数（即出现次数和度相同） 
+3. 找到数组中这些数出现的连续子数组
+
+对于问题 1,借助 Map 的特性,对每个出现的数计频数:key 保存数,value 保存频数,最大的频数就是数组的度了 
+
+对于问题 2 和 3,遍历保存的 Map,当数组的度和当前数的度相等时,进入连续子数组长度判断,找到最小的,代码如下:
+
+```java
+class Solution {
+    public int findShortestSubArray(int[] nums) {
+        int max=1;
+        int min=Integer.MAX_VALUE;
+        Map<Integer,Integer> map=new HashMap<Integer,Integer>();
+        for(int i=0;i<nums.length;i++){
+            if(map.containsKey(nums[i])){
+                int value=map.get(nums[i])+1;
+                map.put(nums[i],value);
+                max=Math.max(max,value);
+            }else {
+                map.put(nums[i],1);
+            }
+        }
+        
+        for (Integer tmp:map.keySet()){
+            if(max==map.get(tmp)){
+               min=Math.min(min,findSubArray(nums,tmp));
+            }
+        }
+        return min;
+    }
+    
+    public int findSubArray(int[] nums,int key){
+        int left=0;
+        int right=nums.length-1;
+        while(left<nums.length-1&&left<right){
+            if(nums[left]!=key){
+                left++;
+            }else {
+                break;
+            }
+        }
+        while(right>0&&right>left){
+            if(nums[right]!=key){
+                right--;
+            }else{
+                break;
+            }
+        }
+        return right-left+1;
+    }
+}
+```
+
+## 公平的糖果交换
+
+爱丽丝和鲍勃有不同大小的糖果棒：`A[i]` 是爱丽丝拥有的第 `i` 块糖的大小，`B[j]` 是鲍勃拥有的第 `j` 块糖的大小。
+
+因为他们是朋友，所以他们想交换一个糖果棒，这样交换后，他们都有相同的糖果总量。*（一个人拥有的糖果总量是他们拥有的糖果棒大小的总和。）*
+
+返回一个整数数组 `ans`，其中 `ans[0]` 是爱丽丝必须交换的糖果棒的大小，`ans[1]` 是 Bob 必须交换的糖果棒的大小。
+
+如果有多个答案，你可以返回其中任何一个。保证答案存在。
+
+ 
+
+**示例 1：**
+
+```
+输入：A = [1,1], B = [2,2]
+输出：[1,2]
+```
+
+**示例 2：**
+
+```
+输入：A = [1,2], B = [2,3]
+输出：[1,2]
+```
+
+**示例 3：**
+
+```
+输入：A = [2], B = [1,3]
+输出：[2,3]
+```
+
+**示例 4：**
+
+```
+输入：A = [1,2,5], B = [2,4]
+输出：[5,4]
+```
+
+ **提示：**
+
+- `1 <= A.length <= 10000`
+- `1 <= B.length <= 10000`
+- `1 <= A[i] <= 100000`
+- `1 <= B[i] <= 100000`
+- 保证爱丽丝与鲍勃的糖果总量不同。
+- 答案肯定存在
+
+解答思路:要想使两边的糖果总量相等,需要先计算两边的差值.比如A=[1,1],B=[2,2],两边的差值为sum(B)-sum(A)=2,因此需要对A数组中的某个元素加2/1,且加完之后的值是数组B中的某个元素.根据以上思路,代码如下:
+
+```java
+class Solution {
+    public int[] fairCandySwap(int[] A, int[] B) {
+        int[] fair=new int[2];
+        int sumA=sumArray(A);
+        int sumB=sumArray(B);
+        int diffValue=Math.abs(sumA-sumB)/2;
+        if(sumA<sumB){
+            for(int i=0;i<A.length;i++){
+                if(isExist(B,A[i]+diffValue)){
+                    fair[0]=A[i];
+                    fair[1]=A[i]+diffValue;
+                    break;
+                }
+            }
+        }else if(sumA>sumB){
+           for(int i=0;i<B.length;i++){
+               if(isExist(A,B[i]+diffValue)){
+                   fair[1]=B[i];
+                   fair[0]=B[i]+diffValue;
+                   break;
+               }
+           } 
+        }
+        return fair;
+    }
+    // 计算数组和
+    public int sumArray(int[] arr){
+        int sum=0;
+        for(int i=0;i<arr.length;i++){
+            sum+=arr[i];
+        }
+        return sum;
+    }
+    // 判断value是否在数组中存在
+    public boolean isExist(int[] arr,int value){
+        for(int i=0;i<arr.length;i++){
+            if(arr[i]==value){
+                return true;
+            }
+        }
+        return false;
+    }
+}
+```
+
+
+
