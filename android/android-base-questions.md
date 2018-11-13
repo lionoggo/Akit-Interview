@@ -151,6 +151,52 @@ Flags有很多中,常见的有:
 
 ### RemoteView应用及与普通View的区别?
 
+### 简述Scroller原理
+
+在Scroller进行滑动过程中,离不开以下三个方法:
+
+- `Scroller#startScroll()`: 为滑动做了一些初始化准备,如起始坐标,滑动的距离和方向以及持续时间(有默认值),动画开始时间等
+- `Scroller#computeScrollOffset()`: 根据当前已经消逝的时间来计算当前的坐标点.由于`startScroll()`设置了动画的时间,因此就可以根据已经消逝的时间计算当前时刻应该所处的位置,其返回结果表示滚动是否结束
+- `View#computeScroll()`: View在绘制的过程中,会触发调用该方法
+
+具体来说就是,首先通过Scroller的`startScroll()`方法来进行一些滚动的初始化设置,然后调用View的`invalidate()`或`postInvalidate()`来请求绘制View.在绘制View(即其draw()方法执行)时内部会触发执行`computeScroll()`方法.`computeScroll()`是个空方法,需要我们自己实现.在实现该方法时,需要我们调用`computeScrollOffset()`计算当前的坐标,并根据其返回结果来确定已经滚动完成.如果滚动没有完成就调用`scrollTo()`方法来继续滚动操作.`scrollTo()`虽然会重新绘制View,但仍然需要我们手动调用`invalidate()`或`postInvalidate()`来触发界面重绘.重新绘制View时又会触发`computeScroll()`,这样就进入循环计算当前位置和绘制的过程,直到最终滚动完成,最终就实现了在时间段内平滑滚动的效果.
+
+Scroller典型用法如下所示:
+
+```java
+
+public class OwnView extends LinearLayout {  
+    private Scroller mScroller;  
+  
+    public OwnView(Context context, AttributeSet attrs) {  
+        super(context, attrs);  
+        mScroller = new Scroller(context);  
+    }  
+  
+    public void toPos(int fx, int fy) {  
+        int dx = fx - mScroller.getFinalX();  
+        int dy = fy - mScroller.getFinalY();  
+        mScroller.startScroll(mScroller.getFinalX(), mScroller.getFinalY(), dx, dy);  
+        invalidate();
+    }  
+  
+    @Override  
+    public void computeScroll() {  
+        if (mScroller.computeScrollOffset()) {  
+            scrollTo(mScroller.getCurrX(), mScroller.getCurrY());  
+            postInvalidate();  
+        }  
+        super.computeScroll();  
+    }  
+} 
+```
+
+
+
+
+
+
+
 ### 简述`requestLayout()`,`onLayout()`,`onDraw()`,`drawChild()`区别与联系
 
 - `requestLayout()`方法 会导致调用`measure()`过程 和`layout()`过程 ,同时会根据标志位判断是否需要`onDraw()`
@@ -178,8 +224,6 @@ Flags有很多中,常见的有:
 查阅这两者的`onMeasure(int widthMeasureSpec,int heightMeasureSpec)`实现代码,发现RelativeLayout会对子View进行2次measure,即调用子View 2次onMeasure;而对于LinearLayout如果不使用weight属性,LinearLayout会在当前方向上进行一次measure的过程;如果使用weight属性,LinearLayout会避开设置过weight属性的view做第一次measure,完了再对设置过weight属性的view做第二次measure.
 
 同时,当RelativeLayout的子View高度和RelativeLayout不同,则会引发效率问题,如果子View非常复杂时,那这个问题会更加严重,因此在很多情况下尽量使用padding代替margin.
-
-### Constraintlayout和RelativeLayout对比?
 
 ### 从哪几个角度进行布局优化?
 
