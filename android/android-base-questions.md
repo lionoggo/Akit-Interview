@@ -541,7 +541,38 @@ ContentProvider以某种Uri的形式对外提供数据,允许其他应用访问�
 
 ### 对WebView熟么?简单讲讲你在使用WebView中遇到过哪些坑?
 
-### 你知道哪些WebView中的漏洞
+### 你知道哪些WebView中的漏洞?
+
+### WebView中Android原生代码与JS代码交互
+
+既然是交互,必然涉及到两个方向:原生代码调动JS,以及JS调用原生代码,其中WebView是两者交互的媒介.
+
+对于原生代码调用JS代码,目前Android为我们提供了以下两种方法:
+
+- `WebView#loadUrl()`: 效率低,无法直接获取返回值,但兼容性高
+- `WebView#evaluateJavascript()`: 效率高,支持获取JS返回结果,但仅支持Android 4.4之上
+
+在具体使用时,通常我们需要根据系统版本来使用,Android 4.4之前使用`loadUrl()`,Android 4.4及之前使用`evaluateJavascript()`:
+
+```java
+final int version = Build.VERSION.SDK_INT;
+// doJsWork() 为需要执行的js方法
+if (version < 18) {
+    mWebView.loadUrl("javascript:doJsWork()");
+} else {
+    mWebView.evaluateJavascript（"javascript:doJsWork()", new ValueCallback<String>() {
+        @Override
+        public void onReceiveValue(String value) {
+            // 省略js执行结果
+        }
+    });
+}
+```
+
+对于JS调用原生代码,主要由两种方式:
+
+- 基于Android提供对象映射方式,使用`addJavascriptInterface()`映射本地对象和JS对象,然后使用`@JavascriptInterface`标注原生需要被JS调用的方法
+- 基与拦截思想:在`shouldOverrideUrlLoading()`拦截请求url,然后根据url确定具体要调用的本地方法;拦截WebView 的`onJsAlert()`,`onJsConfirm()`,`onJsPrompt()`中的消息然后根据消息确定具体要调用的本地方法.这两者都需要实现自定义好方法调用协议.在实际开发中,由于onJsPrompt()更为灵活,且对Android常见较少用,因此通常我们选择利用它来拦截.除了这几个方法外,我们还可以使用`onConsoleMessage()`,该方法可以获得JS控制台的一些信息,进而可以做一些单向的事情,比如根据网页传过来的高度信息,动态调整WebView的大小等.
 
 ### XML解析方式和对比?
 

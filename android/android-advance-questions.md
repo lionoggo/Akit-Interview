@@ -1,58 +1,405 @@
-Android高级
+# 系统原理
 
-## 系统原理
+## Android进程分类及变化?
 
-### 事件分发机制
+Android中将进程分为五种:
 
-### Handler原理
+- 前台进程: 用户当前操作所必需的进程。通常在任意给定时间前台进程都为数不多。只有在内存不足以支持它们同时继续运行这一万不得已的情况下，系统才会终止它们.具有以下情况的进程属于前台进程:
+  1. 拥有用户正在交互的 Activity
+  2. 拥有某个Service并且它绑定到用户正在交互的Activity或者有用前台Service
+  3. 拥有正执行一个生命周期回调方法的Service或者正在执行`onReceive()`的BroadcastReceiver
+- 可视进程:没有任何前台组件、但仍会影响用户在屏幕上所见内容的进程.可见进程被视为是极其重要的进程,除非为了维持所有前台进程同时运行而必须终止,否则系统不会终止这些.具有以下情况的进程属于可见进程:
+  1. 拥有不在前台,但仍然可见的Activity(即当前Activity的`onPause()`被调用)
+  2. 拥有某个Service并且它绑定到上述仍然对用户可见的Activity
+- 服务进程: 服务进程与用户所见内容没有直接关联,但是它们通常在执行一些用户关心的操作,如后台下载数据等.除非内存不足以维持所有前台进程和可见进程同时运行,否则系统会让服务进程保持运行状态.具有以下情况的进程属于服务进程:
+  1. 通过 `startService()`启动的服务,并且不属于上述两个更高类别进程
+- 后台进程: 此类进程对用户体验没有直接影响,系统可能随时终止它们以回收内存供前台进程,可见进程或服务进程使用.手机中通常会有很多后台进程在运行,这些进程会被保存在 LRU表中,以保证包含用户最近查看的Activity的进程最后一个被终止.具有以下情况的进程都属于后台进程:
+  1. 含有对用户不可见的 Activity 的进程,即已调用 `onStop()`并且不属于服务进程
+- 内容节点进程:只含有ContentProvider节点的进程,
+- 空进程: 这种进程存在一目的是用作缓存,一遍再下次启动时能够减少所需的启动时间.系统在需要的时候会终止这些进程.具有以下情况的进程属于空进程:
+  1. 不含有任何活动组件
 
-###Activity与window之间的联系
+## 简述Android 进程回收机制
 
-### AMS相关
+Android采用LMK(即Low Memory Killer,所谓的低内存杀进程)机制来决定进程的回收,该机制是在Linux内核的OOM Killer(Out-Of-Memory Killer)机制上发展而来.在Android进程中,内核会为每个进程分配一个oom_adj值,用来表示进程的重要性,oom_adj的值越小,表示进程越重要,越不容易被杀掉回收.LMK会根据每个进程的oom_adj以及系统预定义不同等级进程的阀值来决定杀掉哪些进程.
 
-### PMS相关
+在Android中通过以下方式可以查看进程的oom_adj值:
 
-### WMS相关
+```shell
+cat /proc/进程号/oom_adj
+```
 
-### Android系统启动流程
+不同等级的进程所定义的阈值不同,可以通过以上方式查看:
 
-### Binder原理
+```shell
+cat /sys/module/lowmemorykiller/parameters/minfree
+```
 
-### ServiceManager的作用,何时被注册的?
+比如当前设备的情况如下:
 
-### APP启动流程
+```shell
+// 前台进程,可视进程,服务进程,后台进程,内容提供节点进程,空进程
+18432,23040,27648,32256,36864,46080
+```
 
-### PathClassLoader与DexClassLoader的实现原理
+这6个数值分别代表android系统回收6种进程的阀值,其中数字单位是page(page是内存分配的单位,1page=4k),可以按照此公式将其转为M:`数值 * 4/1024`,即分别是:72M,90M,108M,126M,144M,180M.
 
-### Debug 跟Release的APK的区别
+当系统剩余内存位于阀值中的一个范围内时,如果一个进程的oom_adj值大于或等于阀值就会被杀死.比如当前系统内存在144M~180M之间时,就会按照空进程中oom_adj值的大小选择杀死哪些空进程.
 
-### 匿名Binder有什么用?
+## 简述Android进程优先级和oom_adj的映射关系?
 
-###AIDL的实现原理?
+在底层,Android采用oom_adj来描述进程的重要的性,那这oom_adj是如何和之前我们说的六种进程等级关联起来的?也就是前台进程的oom_adj是多少,后台又是多少呢?
 
-### Android的签名机制?V2签名有什么优点?
+在`ActivityManager.RunningAppProcessInfo`中我们可以看到有关进程重要性的定义:
 
-### Android系统在什么时候通知应用进行GC?
+```java
+public static class RunningAppProcessInfo implements Parcelable {
+     public static final int IMPORTANCE_FOREGROUND = 100;
+		......
+        public static final int IMPORTANCE_FOREGROUND_SERVICE = 125;
+        @Deprecated
+        public static final int IMPORTANCE_TOP_SLEEPING_PRE_28 = 150;
+        public static final int IMPORTANCE_VISIBLE = 200;
+        public static final int IMPORTANCE_PERCEPTIBLE_PRE_26 = 130;
+        public static final int IMPORTANCE_PERCEPTIBLE = 230;
+        public static final int IMPORTANCE_CANT_SAVE_STATE_PRE_26 = 170;
+        public static final int IMPORTANCE_SERVICE = 300;
+        public static final int IMPORTANCE_TOP_SLEEPING = 325;
+        public static final int IMPORTANCE_CANT_SAVE_STATE = 350;
+        public static final int IMPORTANCE_CACHED = 400;
+        public static final int IMPORTANCE_BACKGROUND = IMPORTANCE_CACHED;
+        @Deprecated
+        public static final int IMPORTANCE_EMPTY = 500;
+        public static final int IMPORTANCE_GONE = 1000;
+        ......
+}        
+```
 
-###如何禁止动态加载代码?
+以上这些常量表示了Process的重要性等级而在ProcessList则定义了相关adj:
 
-### Bundle传数据为什么要序列化?
+```java
+public final class ProcessList {
+	static final int INVALID_ADJ = -10000;
+    static final int UNKNOWN_ADJ = 1001;
+    static final int CACHED_APP_MAX_ADJ = 906;
+    static final int CACHED_APP_MIN_ADJ = 900;
+    static final int SERVICE_B_ADJ = 800;
+    static final int PREVIOUS_APP_ADJ = 700;
+    static final int HOME_APP_ADJ = 600;
+    static final int SERVICE_ADJ = 500;
+    static final int HEAVY_WEIGHT_APP_ADJ = 400;
+    static final int BACKUP_APP_ADJ = 300;
+    static final int PERCEPTIBLE_APP_ADJ = 200;
+    static final int VISIBLE_APP_ADJ = 100;
+    static final int VISIBLE_APP_LAYER_MAX = PERCEPTIBLE_APP_ADJ - VISIBLE_APP_ADJ - 1;
+    static final int FOREGROUND_APP_ADJ = 0;
+    static final int PERSISTENT_SERVICE_ADJ = -700;
+    static final int PERSISTENT_PROC_ADJ = -800;
+    static final int SYSTEM_ADJ = -900;
+    static final int NATIVE_ADJ = -1000;
+}
+```
 
-### 简述Measurespec这个类
+不同版本的定义的值可能不一样,比如早期SYSTEM_ADJ被定义为-16.
 
-### Linearlayou与Relativelayout的绘制原理
+在AMS中,方法`procStateToImportance()`用于实现adj到重要性的映射:
 
-### RecyclerView动画,缓存及数据绑定底层实现
+```java
+    // com.android.server.am.ActivityManagerService#procStateToImportance
+    static int procStateToImportance(int procState, int memAdj,
+            ActivityManager.RunningAppProcessInfo currApp,
+            int clientTargetSdk) {
+        int imp = ActivityManager.RunningAppProcessInfo.procStateToImportanceForTargetSdk(
+                procState, clientTargetSdk);
+        if (imp == ActivityManager.RunningAppProcessInfo.IMPORTANCE_BACKGROUND) {
+            currApp.lru = memAdj;
+        } else {
+            currApp.lru = 0;
+        }
+        return imp;
+    }
+```
 
-###so文件加载流程?
+在上述方法中,最终的转换是通过`RunningAppProcessInfo.procStateToImportanceForTargetSdk()`来完成,具体的转换流程就不说了.
 
-###View是如何被绘制到屏幕上的
+## 根据变化情况判断当前进程状态?
 
-### Android权限管理
+- 某个应用只有一个Activity,打开该应用点击home键,此时该进程是哪种进程?如果按back键呢?
+
+  分别是后台进程和空进程
+
+- 某个应用只有一个Activity,但该Activity启动后会开启一个不断循环的线程,点击home键,该进程是哪种进程?如果按返回键呢?
+
+  分别是后台进程和空进程
+
+- 某个应用只有一个接受输入的Activity,该Activity显示后,点击输入弹出输入法此时是什么进程?点击home后呢?
+
+  分别是可见进程和后台进程
+
+- 某个应用只有一个Activity,但该Activity在启动时会通过`bindService()`方式关联一个Service,在Activity销毁时解绑该Service,此时点击home键和back后,当前进程分别是哪种?
+
+  分别是服务进程和空进程
+
+
+## Dalvik VM和JVM架构的区别?
+
+Dalvik VM并不遵循JVM的实现规范,因此准确的说它不是一个JVM.从设计上来讲,Dalvik VM和JVM主要有以下区别:
+
+### 基于的架构不同
+
+JVM基于操作栈结构,其执行指令都依赖于内部的操作栈.而Dalvik VM是基于寄存器实现,其执行指令和硬件体系相关.对于同样的操作而言,所需的Dalvik VM的指令数量要远远小于JVM.
+
+### 执行的文件不同
+
+和JVM执行编译后的.class文件不同,Dalvik VM执行的是.dex文件.所有java文件编译后生成.class文件经过dx工具处理后,会被压缩到一个.dex文件中,之后Dalvik VM会加载该.dex文件,读取和执行其中的指令.比如每个.class中都有自己的常量池结构,JVM在加载该.class后会为当前.class在内存中开辟常量池空间,但dex中所有原来.class常量池被压缩合并到了一处,在加载之后,对常量池的查找效率更高.
+
+## ART和Dalvik中堆内存的区别?
+
+Dalvik VM的堆结构相对于JVM的堆结构有所区别.在Dalvik中,堆空间分为两部分:Zygote堆和Active堆.其中Zygote堆中存放了Zygote进程在启动过程中预加载和创建的各种对象,在Zygote堆中不会触发GC,所有进程都共享该区域,如系统资源,除此之外所有的对象,包括我们在代码中创建的实例,静态域和数组都是储存在Active堆中.
+
+ART堆结构在Dalvik的基础上进行了更细致了划分,原来的Zygote堆又被分为了Image Space和Zygote Space;原来的Active堆则被分成了Allocation Space和Large Object Space.Image Space用来存放哪些需要预加载的系统类对象,而Large Object Space则用来分配一些大对象.Zygote Space和Allocation Space与Dalvik虚拟机垃圾收集机制中的Zygote堆和Active堆的作用是一样的.
+
+Zygote Space和Image Space是所有进程都共享的区域,而Allocation Space则是每个进程独占的.Zygote进程开始只有1个Image Space和1个Zygote Space.在Zygote进程fork第一个子进程之前,Zygote Space会被一分为二:原来的已经被使用的那部分堆还叫Zygote Space,而未使用的那部分堆就叫Allocation Space.以后的对象都在Allocation Space上分配。
+
+## GC原因
+
+ART和Dalvik中GC的实现有所不同,因此其GC类型也有所差异,在Dalvik中GC主要有以下几种类型:
+
+- GC_FOR_MALLOC: 应用程序创建对象,此时在堆上分配对象时内存不足触发的GC
+- GC_CONCURRENT: 应用程序的堆内存使用率到一定程度时触发的并发GC来释放内存
+- GC_EXPLICIT: 应用程序主动调用`System.gc()`,`VMRuntime.gc()`或收到SIGUSR1信号时触发的GC
+- GC_BEFORE_OOM: 应用在准备抛OOM异常之前进行的最后努力而触发的GC
+- GC_HPROF_DUMP_HEAP: 当请求创建 HPROF文件来分析堆内存时触发的GC
+- GC_EXTERNAL_ALLOC: API 级别小于等于10时 ，外部分配内存导致的GC
+
+在Dalvik虚拟机中,主要提供了两种GC的实现:标记-清理和标记-复制.在编译Dalvik阶段,通过指定WITH_COPYING_GC选项来决定具体要使用哪种GC算法.
+
+在ART中GC主要由以下几种类型:
+
+- Alloc: 当要分配内存的时候发现内存不够的情况下引起的GC,这个GC会发生在正在分配内存的线程
+- Concurrent: 并发GC,不会使App的线程暂停,该GC是在后台线程运行的,并不会阻止内存分配
+- Explicit: 显式的请求进行GC,如调用`System.gc()`.
+- NativeAlloc: Native内存分配时,比如在为Bitmaps或RenderScript分配对象导致内存吃紧时,会触发GC
+
+## GC日志
+
+Dalvik中GC日志格式如下:
+
+```she'l'l
+D/dalvikvm: <GC_Reason> <Amount_freed>, <Heap_stats>, <External_memory_stats>, <Pause_time>
+```
+
+- GC_Reason:表示哪种情况下触发的GC操作,即GC原因
+- Amount_freed: 本次GC回收的内存大小
+- Heap_stats: 表示堆中空闲内存所占百分比,以及[已使用内存大小]/[堆总大小]
+- External memory stats:外部内存统计数据,适应于API 10及以下表示外部分配的内存,以及[已分配内存大小]/[GC下限]
+- Pause time:暂停时间,另外越大的堆会有更长的暂停时间.对于并发GC(GC类型为GC_CONCURRENT)时,该时间分两部分:一个出现在垃圾收集开始时,另一个出现在垃圾收集快要完成时
+
+如下述GC日志:
+
+```
+D/dalvikvm( 9050): GC_CONCURRENT freed 2049K, 65% free 3571K/9991K, external 4703K/5261K, paused 2ms+2ms
+```
+
+1. 引发GC的原因是GC_CONCURRENT
+2. 此次GC释放内存2049K
+3. 当前堆空闲内存百分比为65%,已使用堆内存为3571K,堆总内存大小为9991K
+4. 外部分配内存已经分配4703K,GC下限为5261K
+5. GC暂停时间为2ms+2ms,总耗时共4ms.
+
+ART中GC日志格式如下:
+
+```java
+I/art: <GC_Reason> <GC_Name> <Objects_freed>(<Size_freed>) AllocSpace Objects, <Large_objects_freed>(<Large_object_size_freed>) <Heap_stats> LOS objects, <Pause_time(s)>
+```
+
+- GC_Reason:表示哪种情况下触发的GC操作,即GC原因
+- GC_Name:表示使用了哪种GC回收器,目前有Concurrent mark sweep,Concurrent partial mark sweep,Concurrent sticky mark sweep,Marksweep + semispace四种.
+- Objects_freed: 本次GC从非大对象空间（non large object space）回收的对象数目
+- Size freed:本次GC从非大对象空间回收的字节数
+- Large objects freed:本次GC从大对象空间里回收的对象数目
+- Large object size freed:本次GC从大对象空间里回收的字节数
+- Heap stats:堆的空闲内存百分比和[已使用内存大小]/[堆总大小]
+- Pause times:暂停时间,暂停时间与在GC运行中修改的对象引用的数量成比例.CMS只会在GC结束的时停顿一次,GC过渡会有一个长停顿,是GC时耗的主要因素
+
+如下述GC日志:
+
+```
+I/art : Explicit concurrent mark sweep GC freed 104710(7MB) AllocSpace objects, 21(416KB) LOS objects, 33% free, 25MB/38MB, paused 1.230ms total 67.216ms
+```
+
+1. 引起GC原因是Explicit
+2. 垃圾收集器为concurrent mark sweep,即CMS
+3. 释放对象的数量为104710个,释放字节数为7MB;
+4. 释放大对象的数量为21个,释放大对象字节数为416KB
+5. 堆的空闲内存百分比为33%,已用内存为25MB,堆的总内存为38MB
+6. GC暂停时长为1.230ms,GC总时长为67.216ms
+
+> 和Dalvik相比,ART下GC的策略更完善,同时支持了更多的垃圾回收器,目前主要有以下几种:
+>
+> - Concurrent mark sweep (CMS): 整堆回收器,负责收集释放除Image Space外的所有空间
+> - Concurrent partial mark sweep: 几乎是整回收器,负责收集除image和zygote外的所有空间
+> - Concurrent sticky mark sweep: 分代垃圾收集器,只负责释放从上次GC到现在分配的对象,该GC比全堆和部分标记清除(mark sweep)执行得更频繁,因为它更快而且停顿更短
+> - Marksweep + semispace: 非并发的GC,复制垃圾回收,用于堆转换堆碎片整理
+
+## 事件分发机制
+
+在用户在手指与屏幕接触过程中会产生一系列事件,事件由MotionEvent表示,它使用一个int类型的值来表示不同的事件,我们常见的事件如下:
+
+- MotionEvent.ACTION_DOWN: 手指按下屏幕的瞬间
+- MotionEvent.ACTION_MOVE:手指在屏幕上移动
+- MotionEvent.ACTION_UP手指离开屏幕瞬间
+
+整个事件分发机制其实很容易理解:先分发再消费.一个事件从外往内分发,也就是从最外层容器(Activity)开始不断的向内分发,直到事件被某个View消费掉.此外在Android还允许拦截分发.
+
+在整个事件分发过程中,涉及到以下三个重要的函数:
+
+- boolean dispatchTouchEvent(MotionEvent ex): 该方法负责事件的分发,即将事件由外往内传递.其返回值表示当前事件是否被分发成功:返回true表示事件被分发成功,此次事件分发终止;返回flase表示事件分发失败即当前View及子View均没有消费此次事件,将调用父View的`onTouchEvent()`.
+- boolean onInterceptTouchEvent(MotionEvent ex): 该方法负责事件的拦截操作,用于ViewGroup.其返回值表示是否拦截,true表示拦截该事件,该事件不会继续向下分发,而是调用当前View自身的`onTouchEvent()`;返回false表示不拦截事件,而是继续调用子View的`dispatchTouchEvent()`将事件分发到子View中.
+- boolean onTouchEvent(MotionEvent ex): 该方法负责消费事件,在`dispatchTouchEvent()`中调用,其返回值表示事件是否被消费:true表示事件被消费,本次事件终止;false表示事件没有被消费,将调用父View的`onTouchEvent()`来处理.
+
+整个事件分发流程可以用一下伪代码表示:
+
+```java
+public boolean dispatchTouchEvent(MotionEvent ev) {
+        boolean consumed = false;
+        if (onInterceptTouchEvent(ev)){
+            consume = onTouchEvent(ev);
+        }else{
+            consume = child.dispatchTouchEvent(ev);
+        }
+        return consume;
+    }
+```
+
+整个事件分发机制是基于递归思想,因此很多时候看源代码会有一种云里雾里的感觉.市面上有不少写该知识点的blog,个人感觉只需要多读几遍源代码,明白以上三个方法有什么用以及在哪里用,这样会比较容易.
+
+## Handler原理
+
+首先要明确整个Handler系统涉及两个层次:Java层和Native.单纯说Java层的Handler体系只能说是浮于表面.试想一下,在当前应用点击返回键之后,这个返回见得事件最终是被投递到Native层,那只说Java层的Handler体系尚有不足.
 
 
 
-### Android打包原理
+## Activity与window之间的联系
+
+## AMS相关
+
+## PMS相关
+
+## WMS相关
+
+## Android系统启动流程
+
+Android系统整体启动流程相对简单,但细节很多.从主干来看,其过程如下:
+
+```
+Boot Rom -> BootLoader -> Kernal -> init进程 -> Zygote进程 -> SystemServer进程 -> Home Launcher
+```
+
+1. 按下开机键,引导芯片从固化在Rom的预设代码开始执行,然后加载Bootloader到RAM
+
+2. Bootloader又称为引导程序,先于操作系统内核运行的程序.主要用来检查RAM,初始化硬件参数,以及加载Kernal并运行
+
+3. Kernal被加载后,首先从start_kernel方法开始执行,进行一系列的初始化.start_kernel函数执行到最后调用了reset_init函数进行后续的初始化.而 reset_init函数最主要的任务就是启动内核线程kernel_init.kernel_init函数将完成设备驱动程序的初始化,并调用init_post函数启动用户空间的init进程.到init_post函数为止,内核的初始化已经基本完成.
+
+4. 当初始化内核之后,会启动init进程,init进程是所有进程的祖先进程.在Android中,init进程负责创建系统最关键的守护进程,比如我们熟知的zygote和servicemanager.前者会创建一个Dalvik虚拟机,它负责启动Java层的进程,后者是Binder通信的基础.此外,Android中的属性系统也有init进程负责.
+
+5. Zygote进程是后续所有Java进程的父进程,它接受来此其他请求创建进程命令,在底层最终通过fork方式生成新进程.在在Zygote启动中,主要做两方面的事:1.在Native层创建并启动虚拟机,注册JNI函数,然后执行Java层的ZygoteInit.类的`main()`,2.在ZygoteInit的`main()`,主要是创建ZygoteServer,以及创建SystemServer进程.
+
+6. SystemServer进程启动时,会创建ActivityThread,通过`createSystemContext()`创建系统上下文,以及初始化很多的系统服务,如AMS,并将这些系统服务添加到ServiceManager.
+
+7. AMS启动完成之后,会调用`finishBooting()`来完成系统引导过程,同时发送开机广播,并向Zygote进程请求创建Launcher进程,来使得桌面显示出来
+
+8. 作者：dennis-huang 
+   来源：CSDN 
+   原文：https://blog.csdn.net/h655370/article/details/77727554 
+   版权声明：本文为博主原创文章，转载请附上博文链接！
+
+9. 作者：dennis-huang 
+   来源：CSDN 
+   原文：https://blog.csdn.net/h655370/article/details/77727554 
+   版权声明：本文为博主原创文章，转载请附上博文链接！
+
+10. 作者：dennis-huang 
+    来源：CSDN 
+    原文：https://blog.csdn.net/h655370/article/details/77727554 
+    版权声明：本文为博主原创文章，转载请附上博文链接！
+
+11. 作者：dennis-huang 
+    来源：CSDN 
+    原文：https://blog.csdn.net/h655370/article/details/77727554 
+    版权声明：本文为博主原创文章，转载请附上博文链接！
+
+12. 作者：dennis-huang 
+    来源：CSDN 
+    原文：https://blog.csdn.net/h655370/article/details/77727554 
+    版权声明：本文为博主原创文章，转载请附上博文链接！
+
+13. 作者：dennis-huang 
+    来源：CSDN 
+    原文：https://blog.csdn.net/h655370/article/details/77727554 
+    版权声明：本文为博主原创文章，转载请附上博文链接！
+
+14. 作者：dennis-huang 
+    来源：CSDN 
+    原文：https://blog.csdn.net/h655370/article/details/77727554 
+    版权声明：本文为博主原创文章，转载请附上博文链接！
+
+15. 作者：dennis-huang 
+    来源：CSDN 
+    原文：https://blog.csdn.net/h655370/article/details/77727554 
+    版权声明：本文为博主原创文章，转载请附上博文链接！
+
+16. 作者：dennis-huang 
+    来源：CSDN 
+    原文：https://blog.csdn.net/h655370/article/details/77727554 
+    版权声明：本文为博主原创文章，转载请附上博文链接！
+
+17. 作者：dennis-huang 
+    来源：CSDN 
+    原文：https://blog.csdn.net/h655370/article/details/77727554 
+    版权声明：本文为博主原创文章，转载请附上博文链接！
+
+
+## Binder原理
+
+## ServiceManager的作用,何时被注册的?
+
+## APP启动流程
+
+## Debug 跟Release的APK的区别
+
+## 匿名Binder有什么用?
+
+## Android的签名机制?V2签名有什么优点?
+
+## Android系统在什么时候通知应用进行GC?
+
+## 如何禁止动态加载代码?
+
+## Bundle传数据为什么要序列化?
+
+## 简述Measurespec这个类
+
+## RecyclerView动画,缓存及数据绑定底层实现
+
+## so文件加载流程?
+
+## 简述View绘制流程?
+
+![image-20181112003747633](https://i.imgur.com/JAUqCbs.png)
+
+measure()方法,layout(),draw()三个方法主要存放了一些标识符,来判断每个View是否需要再重新测量,布局或者绘制,主要的绘制过程还是在`onMeasure()`,`onLayout()`,`onDraw()`这个三个方法中
+
+- onMesarue(): 为整个View树计算实际的大小,即设置实际的高(对应属性:mMeasuredHeight)和宽(对应属性: mMeasureWidth),每个View的控件的实际宽高都是由父视图和本身视图决定的
+- onLayout(): 为将整个根据子视图的大小以及布局参数将View树放到合适的位置上
+- onDraw(): 开始绘制图像,绘制的流程如下:
+  1. 首先绘制该View的背景
+  2. 调用`onDraw()`方法绘制视图本身(每个View都需要重载该方法,ViewGroup不需要实现该方法),如果该View是ViewGroup,调用`dispatchDraw()`方法绘制子视图
+
+## Android权限管理
+
+## Android打包原理
 
 所谓打包就是将工程变为apk的过程.对于Android APK而言,主要由两部分构成:代码文件和资源文件.因此Android的项目的打包过程也就基本分为对两类资源的处理过程.使用V1签名和V2的签名的的打包流程稍有不同,我们以V1签名为例来简述打包流程:
 
@@ -74,9 +421,7 @@ Android 7.0后新增了V2签名,其签名由apksigner工具完成,其大概流�
 
 由于V2签名机制改变,apk的对齐被移到签名之前.即现在是先进行对齐操作然后才会使用apksigner进行签名.
 
-
-
-### Android类加载器
+## Android类加载器
 
 Android中的虚拟机读取Dex文件,Dex本质就是对Class文件进一步压缩调整,优化,最终为每个API生成class.dex(没有开启多Dex前提下).目前Android主要有以下几种加载器:
 
@@ -115,11 +460,7 @@ public class PathClassLoader extends BaseDexClassLoader {
 - InMemoryDexClassLoader是API 26新增的类加载器
 - DelegateLastClassLoader是API 27后新增
 
--------
-
-
-
-## 数据结构与设计
+# 数据结构与设计
 
 ### ArrayMap的实现原理是什么?
 
@@ -141,23 +482,84 @@ public class PathClassLoader extends BaseDexClassLoader {
 
 -----
 
-## 开源框架
+# 开源框架
 
-### 网络框架
+## 网络框架
 
-####Volley实现原理,简单画出其架构图.
+### Volley实现原理,简单画出其架构图.
 
-####Volley的优缺点是什么?
+### Volley的优缺点是什么?
 
-####能否利用Volley下载大文件或者加载大图?
+### 能否利用Volley下载大文件或者加载大图?
 
-### 图片加载
+### OkHttp特点是什么?简述其基本架构?
 
-#### Gide原理
+### OKHttp任务执行方式及设计?
 
-### Glide加载原理
+### Retrofit的优点和缺点是什么?简述其基本架构?
+
+### Retrofit如何实现动态代理的?
+
+## 图片加载框架
+
+### 如何计算一张图片的大小?
+
+在Android中一张图片所占的大小主要和以下几个因数有关:图片长度,图片宽度以及单位像素所占的字节数,计算公式如下:`图片宽度 * 图片高度 * 单位像素所占字节数 `,需要注意此处图片宽高是以像素为单位,其中单位像素所占的字节数和图像的色彩模式有关,目前我们常见的编码方式可分为以下几种:
+
+| 图像色彩模式 | 描述                                           | 单位像素所占内存(单位字节) |
+| ------------ | ---------------------------------------------- | -------------------------- |
+| ALPHA_8      | 一个像素只有alpha值,没有RGB值,只占用8位        | 1                          |
+| ARGB_4444    | 一个像素中透明及红绿蓝分别占用4位              | 2                          |
+| ARGB_8888    | 一个像素中透明及红绿蓝分别占用8位              | 4                          |
+| RGB_565      | 一个像素中红绿蓝分别占用5,6,5位,不存在透明通道 | 2                          |
+
+举个例子,如果一张宽高都是100像素的图片,如果再用RGB_565进行编码,那么它在内存中所占用的大小为:`100*100*2`=20000字节.
+
+### 图片加载框架的基本实现原理?
+
+图片加载框架是一种特殊的网络框架,不过其专门服务于图片.凡是高效的图片框架都致力于解决以下两个问题:
+
+- 减少图片从网络下载次数
+- 提高加载速度
+
+解决以上两个问题的基本方案是引入缓存方案.常见的缓存方案是三级缓存方案,即网络->硬盘->内存:当需要加载一张图片时,首先尝试从内存中读取,读取失败则尝试从硬盘读取,读取失败则从网络读取.从网络中读取成功的图片资源会被缓存在内存和硬盘中.
+
+### Gide原理
+
+对于Glide而言,其基本原理离不开以下几个要点:
+
+- Glide生命周期同步是如何实现的?
+- Glide对于图片缓存算法实现原理是什么?
+
+对于生命周期同步问题,Glide采取了非常巧妙的做法,即为当前Activity创建了内部不可见的Fragment,通过监控Fragment的生命周期来实现管理.
+
+对于图片缓存算法,Glide在三级缓存方案的基础上进行扩展,不仅仅考虑减少图片从网络加载次数,还兼顾减少硬盘加载到内存的次数.为此,Glide引入了活动缓存的概念,其基本原理是当前正在使用的图片以弱引用的方式被缓存在内寸中,以减少由于内存LRU空间限制导致图片资源频繁被回收而最终导致多次从硬盘加载的情况.对于活动缓存的回收不是仅仅依赖gc对弱引用的回收,而是对活动缓存中的每个图片资源都采用"引用计数"的算法进行管理,当图片被使用时,其计数器进行+1操作,否则进行-1操作,当引用计数器为0时,就可以将图片资源从活动缓存中删除,并将其移至基于LRU实现的内存缓存中.
+
+### Glide缓存方案与传统的三级缓存方案相比有什么好处?
+
+对于Glide的缓存方案而言,其在典型三级缓存方案的基础上引入了活动缓存的概念.当一张图片首次被加载时,对该资源的查找过程为:`活动缓存 -> LRU内存缓存 -> LRU硬盘缓存 -> 网络`;当图片成功从网络下载后,其写入缓存过程如下:`磁盘缓存 -> 活动缓存 `;一张图片从在使用到不使用时缓存的写入流程:`活动缓存 -> LRU内存缓存`.
+
+尽管Glide缓存流程看起来比较简单,但实际上其提供了非常灵活的配置,允许我们根据自己的需求定制缓存策略,比如针对磁盘缓存,其提供了以下策略:
+
+- DiskCacheStrategy.NONE: 不缓存图片
+- DiskCacheStrategy.SOURCE: 只缓存原始图片 
+- DiskCacheStrategy.RESULT: 只缓存结果图片,这也是默认的缓存策略)
+- DiskCacheStrategy.ALL: 同时缓存原时图片和结果图片
+> 什么是原图？什么是结果图？
+>
+> 当我们使用Glide去加载一张图片的时候,默认情况下Glide并不会将原始图片展示出来,而是会对原始图片进行压缩和转换,之后得到的图片成为结果图.如加载的图片分辨率为1000x1000,但是最终显示该图片的ImageView大小只有300x300,那么Glide就会对原始图片进行处理成我们需要的300x300的小图,并缓存这张小图.
+
+
 
 ### 缓存方案与LRU算法
+
+无论是内存空间,还是硬盘空间,都是有大小限制的,这意味着图片不能无限制缓存.一张图片什么时候被缓存,什么时候需要从从缓存中删除,这就涉及到具体的缓存算法.缓存算法有很多,比如:
+
+- LFU(Least Frequently Used):最近最少使用算法,即如果一个数据在最近一段时间内使用次数很少，那么在将来一段时间内被使用的可能性也很小.
+- LRU(LeastRecently Used):最近最久未使用,即一个数据在最近一段时间没有被访问到,那么在将来它被访问的可能性也很小.也就是说,当限定的空间已存满数据时,应当把最久没有被访问到的数据淘汰.
+- FIFO(First in First out): 先进先出,即一个数据最先进入缓存中,则应该最早淘汰掉.也就是说,当缓存满的时候,应当把最先进入缓存的数据给淘汰掉.
+
+由于图片资源的使用情况,在Android的图片缓存算法基本都是基于LRU.针对典型的的三级缓存方案,内存/硬盘中分别使用LruCache和LruDiskCache.
 
 ### Glide加载长图与图片背景色
 
@@ -177,7 +579,7 @@ public class PathClassLoader extends BaseDexClassLoader {
 
 ####LeakCanary实现原理
 
-###其他
+### 其他
 
 ####JSBridge实现原理
 
@@ -187,7 +589,11 @@ public class PathClassLoader extends BaseDexClassLoader {
 
 ### 写过Gradle脚本么?简述Gradle生命周期
 
-##应用优化
+# 应用优化
+
+## 进程保活
+
+
 
 ### 如何压缩APK的大小?
 
@@ -197,7 +603,9 @@ public class PathClassLoader extends BaseDexClassLoader {
 
 ###没有给权限如何定位，特定机型定位失败，如何解决 
 
-### 如何排查ANR问题?
+### 谈谈你对Bitmap的理解，以及bitmap.recycle()的工作原理？
+
+## 如何高效的加载图片资源？
 
 ### 现在需要遍历SD卡下所有的文件打印出后缀名为.txt文件名称，如何提高时间效率？
 
