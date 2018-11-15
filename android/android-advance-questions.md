@@ -1,4 +1,4 @@
-# 系统原理
+# mWakeEventFd系统原理
 
 ## Android进程分类及变化?
 
@@ -153,17 +153,23 @@ JVM基于操作栈结构,其执行指令都依赖于内部的操作栈.而Dalvik
 
 和JVM执行编译后的.class文件不同,Dalvik VM执行的是.dex文件.所有java文件编译后生成.class文件经过dx工具处理后,会被压缩到一个.dex文件中,之后Dalvik VM会加载该.dex文件,读取和执行其中的指令.比如每个.class中都有自己的常量池结构,JVM在加载该.class后会为当前.class在内存中开辟常量池空间,但dex中所有原来.class常量池被压缩合并到了一处,在加载之后,对常量池的查找效率更高.
 
-## ART和Dalvik中堆内存的区别?
+## Art相比Dalvik在执行方式有什么变化?
+
+在Dalvik下,应用运行时会通过解释器将字节码转换为机器码,如果某段代码运行频繁,则会通过JIT(及时编译器)直接将其转换为机器码,这样就不用每次进行转换操作了,进而提高了效率.
+
+在ART 下,应用第一次安装的时候,字节码就会被编译成机器码,使其成为真正的本地应用.我们将这个过程称之为预编译,即我们常说的AOT(Ahead-Of-Time).之后应用开始运行时效率就很高了.
+
+## Art和Dalvik中堆内存的区别?
 
 Dalvik VM的堆结构相对于JVM的堆结构有所区别.在Dalvik中,堆空间分为两部分:Zygote堆和Active堆.其中Zygote堆中存放了Zygote进程在启动过程中预加载和创建的各种对象,在Zygote堆中不会触发GC,所有进程都共享该区域,如系统资源,除此之外所有的对象,包括我们在代码中创建的实例,静态域和数组都是储存在Active堆中.
 
-ART堆结构在Dalvik的基础上进行了更细致了划分,原来的Zygote堆又被分为了Image Space和Zygote Space;原来的Active堆则被分成了Allocation Space和Large Object Space.Image Space用来存放哪些需要预加载的系统类对象,而Large Object Space则用来分配一些大对象.Zygote Space和Allocation Space与Dalvik虚拟机垃圾收集机制中的Zygote堆和Active堆的作用是一样的.
+Art堆结构在Dalvik的基础上进行了更细致了划分,原来的Zygote堆又被分为了Image Space和Zygote Space;原来的Active堆则被分成了Allocation Space和Large Object Space.Image Space用来存放哪些需要预加载的系统类对象,而Large Object Space则用来分配一些大对象.Zygote Space和Allocation Space与Dalvik虚拟机垃圾收集机制中的Zygote堆和Active堆的作用是一样的.
 
 Zygote Space和Image Space是所有进程都共享的区域,而Allocation Space则是每个进程独占的.Zygote进程开始只有1个Image Space和1个Zygote Space.在Zygote进程fork第一个子进程之前,Zygote Space会被一分为二:原来的已经被使用的那部分堆还叫Zygote Space,而未使用的那部分堆就叫Allocation Space.以后的对象都在Allocation Space上分配。
 
 ## GC原因
 
-ART和Dalvik中GC的实现有所不同,因此其GC类型也有所差异,在Dalvik中GC主要有以下几种类型:
+Art和Dalvik中GC的实现有所不同,因此其GC类型也有所差异,在Dalvik中GC主要有以下几种类型:
 
 - GC_FOR_MALLOC: 应用程序创建对象,此时在堆上分配对象时内存不足触发的GC
 - GC_CONCURRENT: 应用程序的堆内存使用率到一定程度时触发的并发GC来释放内存
@@ -174,7 +180,7 @@ ART和Dalvik中GC的实现有所不同,因此其GC类型也有所差异,在Dalvi
 
 在Dalvik虚拟机中,主要提供了两种GC的实现:标记-清理和标记-复制.在编译Dalvik阶段,通过指定WITH_COPYING_GC选项来决定具体要使用哪种GC算法.
 
-在ART中GC主要由以下几种类型:
+在Art中GC主要由以下几种类型:
 
 - Alloc: 当要分配内存的时候发现内存不够的情况下引起的GC,这个GC会发生在正在分配内存的线程
 - Concurrent: 并发GC,不会使App的线程暂停,该GC是在后台线程运行的,并不会阻止内存分配
@@ -207,7 +213,7 @@ D/dalvikvm( 9050): GC_CONCURRENT freed 2049K, 65% free 3571K/9991K, external 470
 4. 外部分配内存已经分配4703K,GC下限为5261K
 5. GC暂停时间为2ms+2ms,总耗时共4ms.
 
-ART中GC日志格式如下:
+Art中GC日志格式如下:
 
 ```java
 I/art: <GC_Reason> <GC_Name> <Objects_freed>(<Size_freed>) AllocSpace Objects, <Large_objects_freed>(<Large_object_size_freed>) <Heap_stats> LOS objects, <Pause_time(s)>
@@ -276,9 +282,397 @@ public boolean dispatchTouchEvent(MotionEvent ev) {
 
 ## Handler原理
 
-首先要明确整个Handler系统涉及两个层次:Java层和Native.单纯说Java层的Handler体系只能说是浮于表面.试想一下,在当前应用点击返回键之后,这个返回见得事件最终是被投递到Native层,那只说Java层的Handler体系尚有不足.
+首先要明确整个Handler系统涉及两个层次:Java层和Native.单纯说Java层的Handler体系只能说是浮于表面.
 
+在Java层,主要存在以下几个相关的类型
 
+- Handler: 用于发送消息和处理消息
+- MessageQueue: 存储消息的队列,在获取不到消息时会发生阻塞
+- Looper : 用于循环遍历队列中的消息
+
+在应用的入口函数ActivtyThread的`main()`方法中,会调用`Looper.prepareMainLooper()`为其创建Looper,并会通过`Looper.loop()`来使得它循环起来.
+
+```java
+android.app.ActivityThread#main
+public static void main(String[] args) {
+    ......
+    Looper.prepareMainLooper();
+    ......
+    
+    ActivityThread thread = new ActivityThread();
+    thread.attach(false, startSeq);
+
+    if (sMainThreadHandler == null) {
+        sMainThreadHandler = thread.getHandler();
+    }
+    ......
+    
+    Looper.loop();
+    throw new RuntimeException("Main thread loop unexpectedly exited");
+}
+
+```
+
+### Looper及MessageQueue对象创建
+
+在Looper中,提供了两中方式来为当前线程Looper对象,一种是`Looper#prepareMainLooper()`,另一种是`Looper#prepare()`,前者是用来应用启动时自动调用,为主线程创建Looper对象,而后者是我们自己开始时常用的方式,两者的实现并无区别,`prepareMainLooper()`底层使用`prepare()`:
+
+```java
+public final class Looper {
+    
+    public static void prepare() {
+        prepare(true);
+    }
+
+    private static void prepare(boolean quitAllowed) {
+        if (sThreadLocal.get() != null) {
+            throw new RuntimeException("Only one Looper may be created per thread");
+        }
+        sThreadLocal.set(new Looper(quitAllowed));
+    }
+
+    public static void prepareMainLooper() {
+        // 为主线程创建Looper对象,最终仍然是通过prepare()实现
+        prepare(false);
+        synchronized (Looper.class) {
+            if (sMainLooper != null) {
+                throw new IllegalStateException("The main Looper has already been prepared.");
+            }
+            sMainLooper = myLooper();
+        }
+    }
+}
+```
+
+线程拥有自己的Looper 对象,该Looper对象由ThreadLocal对象管理.在线程内第一次调用`prepare()`时便会为其生成Looper对象,并添加到sThreadLocal中.后续每个线程取出的Looper对象,都是从sThreadLocal拿到的.Looper的存在可以很容易让我创建一个单线程串行消息处理模型.
+
+在Looper的构造函数中会创建一个MessageQueue对象.
+
+```java
+public final class Looper {   
+    
+	private Looper(boolean quitAllowed) {
+        mQueue = new MessageQueue(quitAllowed);
+        mThread = Thread.currentThread();
+    }
+    
+}
+```
+
+MessageQueue是典型的单链表队列.其每个元素Message中存在next字段指向下一个Message.之所以采用链接而非数组的原因是该场景是典型插入多的场景,采用链表效率更高.
+
+在MessageQueue的构造函数中会调用`nativeInit()`来在Native层创建与之对应的NativeMessageQueue.同时NativeMessageQueue创建后期被存放在MessageQueue的mPrt中,以便MessageQueue在需要时能快速找到对应的NativeMessageQueue.
+
+```java
+public final class MessageQueue {       
+	MessageQueue(boolean quitAllowed) {
+        mQuitAllowed = quitAllowed;
+        mPtr = nativeInit();
+    }
+}
+```
+
+在`android_os_MessageQueue_nativeInit()`中进行NativeMessageQueue创建.
+
+```c++
+
+static jlong android_os_MessageQueue_nativeInit(JNIEnv* env, jclass clazz) {
+    NativeMessageQueue* nativeMessageQueue = new NativeMessageQueue();
+    if (!nativeMessageQueue) {
+        jniThrowRuntimeException(env, "Unable to allocate native queue");
+        return 0;
+    }
+
+    nativeMessageQueue->incStrong(env);
+    return reinterpret_cast<jlong>(nativeMessageQueue);
+}
+```
+
+这个NativeMessageQueue作用和Java层的MessageQueue类似,并且它也需要一个Looper来不断的循环处理其中的消息.
+
+```c++
+NativeMessageQueue::NativeMessageQueue() :
+        mPollEnv(NULL), mPollObj(NULL), mExceptionObj(NULL) {
+    mLooper = Looper::getForThread();
+    if (mLooper == NULL) {
+        mLooper = new Looper(false);
+        Looper::setForThread(mLooper);
+    }
+}
+```
+
+当然在NativeMessageQueue中创建的Looper也是Native层的.
+
+```c++
+Looper::Looper(bool allowNonCallbacks)
+    : mAllowNonCallbacks(allowNonCallbacks),
+      mSendingMessage(false),
+      mPolling(false),
+      mEpollRebuildRequired(false),
+      mNextRequestSeq(0),
+      mResponseIndex(0),
+      mNextMessageUptime(LLONG_MAX) {
+    // 通过eventfd创建mWakeEventFd,用于实现进程或线程之间的通知,EFD_NONBLOCK|EFD_CLOEXEC
+    // 用来将其     设置成非阻塞,且在执行exec时自动关闭描述符
+    mWakeEventFd.reset(eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC));
+    LOG_ALWAYS_FATAL_IF(mWakeEventFd.get() < 0, "Could not make wake event fd: %s", strerror(errno));
+
+    AutoMutex _l(mLock);
+    rebuildEpollLocked();
+}
+```
+
+在Native层Looper的创建中,涉及到整个Handler体系最核心的地方,首先通过`eventfd()`创建mWakeEventFd.eventfd类似于管道的概念,可以实现进程/线程间的事件通知,但它的效率比传统的管道性能更高.其函数原型如下:
+
+```c++
+#include <sys/eventfd.h>
+int eventfd(unsigned int initval, int flags);
+```
+
+接下主要的逻辑是`rebuildEpollLocked()`:
+
+```c++
+
+void Looper::rebuildEpollLocked() {
+    // Close old epoll instance if we have one.
+    if (mEpollFd >= 0) {
+#if DEBUG_CALLBACKS
+        ALOGD("%p ~ rebuildEpollLocked - rebuilding epoll set", this);
+#endif
+        mEpollFd.reset();
+    }
+
+    // 通过epoll_create()创建epoll实例mEpollFd.epoll是一种高效的I/O复用机制,可以检测一个或多个
+    // 文件的变化
+    mEpollFd.reset(epoll_create(EPOLL_SIZE_HINT));
+    LOG_ALWAYS_FATAL_IF(mEpollFd < 0, "Could not create epoll instance: %s", strerror(errno));
+
+    struct epoll_event eventItem;
+    memset(& eventItem, 0, sizeof(epoll_event)); // zero out unused members of data field union
+    eventItem.events = EPOLLIN;
+    eventItem.data.fd = mWakeEventFd.get();
+    // 将之前打开的mWakeEventFd注册到epoll中,但mWakeEventFd被写入数据时,epoll会检测的到
+    // EPOLL_CTL_ADD表示将fd注册到epoll中
+    int result = epoll_ctl(mEpollFd.get(), EPOLL_CTL_ADD, mWakeEventFd.get(), &eventItem);
+    LOG_ALWAYS_FATAL_IF(result != 0, "Could not add wake event fd to epoll instance: %s",
+                        strerror(errno));
+
+    for (size_t i = 0; i < mRequests.size(); i++) {
+        const Request& request = mRequests.valueAt(i);
+        struct epoll_event eventItem;
+        request.initEventItem(&eventItem);
+
+        int epollResult = epoll_ctl(mEpollFd.get(), EPOLL_CTL_ADD, request.fd, &eventItem);
+        if (epollResult < 0) {
+            ALOGE("Error adding epoll events for fd %d while rebuilding epoll set: %s",
+                  request.fd, strerror(errno));
+        }
+    }
+}
+```
+
+上述过程最重要的就是eventfd和epoll的结合使用.通过eventfd来实现进程/线程键效果的消息机制,并将它注册到epoll中,在检测eventfd被写入数据时,epoll就会被唤醒,进而处理这些产生变化的fd.
+
+### Looper获取待执行Message
+
+到这里,关于Handler体系在Java层和Native层作用才说一般.接下来需要之道Looper是如何循环处理MessageQueue的.回到Java,从`Looper#loop()`可见端倪
+
+```java
+ public static void loop() {
+        final Looper me = myLooper();
+        final MessageQueue queue = me.mQueue;
+     	.......
+        for (;;) {
+            // 调用MessageQueue的next()来获取下一个待处理的Message.在获取不到或者
+            // Message还未到执行时间时,该方法可能阻塞
+            Message msg = queue.next(); // might block
+            if (msg == null) {
+
+                return;
+            }
+
+            try {
+                msg.target.dispatchMessage(msg);
+                dispatchEnd = needEndTime ? SystemClock.uptimeMillis() : 0;
+            } finally {
+                
+            }
+			.......
+        }
+    }
+```
+
+在`loop()`主要在一个循环中不断的调用MessageQueue的`next()`来获取下一个待处理的Message.其中`next()`可能会阻塞.对我们而言需要了解是它是如何实现阻塞的.之前遇到有面试官说这是通过`Object.wait(time)`,兼职颠覆三观.
+
+```java
+    Message next() {
+        // Return here if the message loop has already quit and been disposed.
+        // This can happen if the application tries to restart a looper after quit
+        // which is not supported.
+        final long ptr = mPtr;
+        if (ptr == 0) {
+            return null;
+        }
+
+        int pendingIdleHandlerCount = -1; // -1 only during first iteration
+        int nextPollTimeoutMillis = 0;
+        for (;;) {
+            if (nextPollTimeoutMillis != 0) {
+                Binder.flushPendingCommands();
+            }
+
+            nativePollOnce(ptr, nextPollTimeoutMillis);
+
+            synchronized (this) {
+                final long now = SystemClock.uptimeMillis();
+                Message prevMsg = null;
+                Message msg = mMessages;
+                if (msg != null && msg.target == null) {
+                    do {
+                        prevMsg = msg;
+                        msg = msg.next;
+                    } while (msg != null && !msg.isAsynchronous());
+                }
+                
+                if (msg != null) {
+                    // 当前Message还没到该执行的时间,需要计算要等待的时间,以便后面实现阻塞多久
+                    if (now < msg.when) {
+                        nextPollTimeoutMillis = (int) Math.min(msg.when - now, Integer.MAX_VALUE);
+                    } else {
+                        // 获取到Message
+                        .......    
+                        return msg;
+                    }
+                } else {
+                    // No more messages.
+                    nextPollTimeoutMillis = -1;
+                }
+            }
+			.......
+        }
+    }
+```
+
+上述过程主要是取出下一个待执行的Message,如果该Message还未运行时间,那么需要计算需要等待的时间,接下来调用底层方法`nativePollOnce()`,在`nativePollOnce()`会继续调用NativeMessageQueue的`pollOnce()`,在该方法中继续调用Native层Looper的`pollOnce()`,最终又转到Looper的`pollInner()`中:
+
+```c++
+int Looper::pollInner(int timeoutMillis) {
+	// timeoutMillis即在Java层计算出当前Message到执行时还需要等待的时间
+    ......
+    struct epoll_event eventItems[EPOLL_MAX_EVENTS];
+    // 调用epoll_wait()阻塞timeoutMillis时间,或者直到有人向其监听的mWakeEventFd写入数据
+    // 该操作会被唤醒,从阻塞中状态解除,并将唤醒事件填充到eventItems数组中
+    int eventCount = epoll_wait(mEpollFd.get(), eventItems, EPOLL_MAX_EVENTS, timeoutMillis);
+	......
+   
+    mPolling = false;
+	......
+        
+    for (int i = 0; i < eventCount; i++) {
+        int fd = eventItems[i].data.fd;
+        uint32_t epollEvents = eventItems[i].events;
+        if (fd == mWakeEventFd.get()) {
+            // EPOLLIN事件意味着有数据写入mWakeEventFd中,接下来通过awoken()读取出数据
+            // 读取出的数据并没有什么作用.只是因为epoll这里采用水平触发模式,如果不读取出
+            // 数据,epoll_wait()下一次就不会进入到等待状态
+            if (epollEvents & EPOLLIN) {
+                awoken();
+            } else {
+                .......
+            }
+        } else {
+           ......
+        }
+    }
+	.......
+
+    return result;
+}
+
+```
+
+最终限时等待操作由`epoll_wait()`完成,并且epoll在检测到mWakeEventFd中有数据被写入时,`epoll_wait()`就会从阻塞状态中唤醒,并读取出数据,但这数据没什么用.
+
+### Handler发送和处理数据
+
+到现在关于Handler体系中Looper获取Message的流程已经完成.通过Handler发送消息时,最终调用到`sendMessageAtTime()`
+
+```java
+    public boolean sendMessageAtTime(Message msg, long uptimeMillis) {
+        MessageQueue queue = mQueue;
+        if (queue == null) {
+            return false;
+        }
+        return enqueueMessage(queue, msg, uptimeMillis);
+    }
+```
+
+接下来通过`enqueueMessage()`将Message添加到对应的MessageQueue中,最终入队方法时`MessageQueue#enqueueMessage()`:
+
+```java
+    boolean enqueueMessage(Message msg, long when) {
+  		......
+        synchronized (this) {
+          
+            msg.markInUse();
+            msg.when = when;
+            Message p = mMessages;
+            boolean needWake;
+            if (p == null || when == 0 || when < p.when) {
+                // 如果当mMessages为空或者还新加入的msg执行时间比MMessage靠前,就将新进入的msg设为
+                // MessageQueue中的头结点,并唤醒阻塞中的MessageQueue
+                msg.next = p;
+                mMessages = msg;
+                needWake = mBlocked;
+            } else {
+             	// 主要是讲新加入的Message插入到MessageQueue中合适位置,主要是根据时间进行
+                needWake = mBlocked && p.target == null && msg.isAsynchronous();
+                Message prev;
+                for (;;) {
+                    prev = p;
+                    p = p.next;
+                    if (p == null || when < p.when) {
+                        break;
+                    }
+                    if (needWake && p.isAsynchronous()) {
+                        needWake = false;
+                    }
+                }
+                msg.next = p; // invariant: p == prev.next
+                prev.next = msg;
+            }
+
+            // We can assume mPtr != 0 because mQuitting is false.
+            if (needWake) {
+                nativeWake(mPtr);
+            }
+        }
+        return true;
+    }
+```
+
+在上述放中,主要做两件事:将新加入的Message插入到MessageQueue中以及通过调用本地nativeWake()唤醒处在阻塞状态的MessageQueue.之前说道阻塞是通过native层的`epoll_wait()`实现,那其唤醒操作同样也需要通过底层来实现.`nativeWake()`最终调用NativeMessageQueue的`wake()`,而该方法最终又调用了Native层的`wake()`:
+
+```c++
+void NativeMessageQueue::wake() {
+    mLooper->wake();
+}
+```
+
+```c++
+void Looper::wake() {
+    uint64_t inc = 1;
+    ssize_t nWrite = TEMP_FAILURE_RETRY(write(mWakeEventFd.get(), &inc, sizeof(uint64_t)));
+    if (nWrite != sizeof(uint64_t)) {
+        if (errno != EAGAIN) {
+            LOG_ALWAYS_FATAL("Could not write wake signal to fd %d: %s", mWakeEventFd.get(),
+                             strerror(errno));
+        }
+    }
+}
+```
+
+要想唤醒处在阻塞中的`epoll_wait()`非常简单.由于mWakeEventFd是通过`eventfd()`创建的用于进程/线程之间通知的fd,同时该fd被epoll监控,因此只需向mWakeEventFd写数据(比如此处写入了一个uint64_t类型数据),就可以唤醒处在阻塞状态的`epoll_wait()`,原来处在阻塞状态的`MessageQueue#next`也会从阻塞中唤醒,Looper就可以继续循环处理MessageQueue了.如果MessageQueue中没有要执行的Message或者需要执行Message还没到执行时间,最终又会进入到阻塞状态,知道下次mWakerEventFd被再次写入数据,即有人通过Handler发送消息.
 
 ## Activity与window之间的联系
 
@@ -421,13 +815,15 @@ Android 7.0后新增了V2签名,其签名由apksigner工具完成,其大概流�
 
 由于V2签名机制改变,apk的对齐被移到签名之前.即现在是先进行对齐操作然后才会使用apksigner进行签名.
 
-## Android类加载器
+## Android类加载器体系
 
 Android中的虚拟机读取Dex文件,Dex本质就是对Class文件进一步压缩调整,优化,最终为每个API生成class.dex(没有开启多Dex前提下).目前Android主要有以下几种加载器:
 
 ![image-20180806152446643](http://pbj0kpudr.bkt.clouddn.com/blog/2018-08-06-072446.png)
 
-其中我们常见的是:DexClassLoader和PathClassLoader.两者都是BaseDexClassLoader的子类.区别在于调用父类构造器时,DexClassLoader会传入optimizedDirectory参数.该参数指定的路径用来缓存Dex的文件(该路径通常为应用的应用的私有目录,以避免注入攻击).PathClassLoader中该参数为NULL,此时就会使用默认的optimizedDirectory路径`/data/dalvik-cache`,换句话说,两者只是对BaseDexClassLoader传入的构造参数不同而已,从用途上来讲,PathClassLoader用来加载Android系统类和app应用,DexClassLoader用来动态加载包含class.dex的jar/apk文件.虽然我们都知道Dalvik不能识别jar,但在BaseClassLoader中会对jar/zip/apk/dex文件生成一个对应的dex文件,因此最终都是处理的Dex文件.
+其中我们常见的是:DexClassLoader和PathClassLoader.两者都是BaseDexClassLoader的子类.区别在于调用父类构造器时,DexClassLoader会传入optimizedDirectory参数.该参数指定的路径(该路径通常为应用的应用的私有目录,以避免注入攻击)用来缓存Dex优化后的文件.
+
+PathClassLoader中该参数为NULL,此时就会使用默认的optimizedDirectory路径`/data/dalvik-cache`,换句话说,两者只是对BaseDexClassLoader传入的构造参数不同而已,从用途上来讲,PathClassLoader用来加载Android系统类和app应用,DexClassLoader用来动态加载包含class.dex的jar/apk文件.虽然我们都知道Dalvik不能识别jar,但在BaseClassLoader中会对jar/zip/apk/dex文件生成一个对应的dex文件,因此最终都是处理的Dex文件.
 
 ```java
 public class DexClassLoader extends BaseDexClassLoader {
@@ -456,23 +852,161 @@ public class PathClassLoader extends BaseDexClassLoader {
 
 注意:
 
-- Android应用启动时,默认父构造器时PathClassLoader,且其父加载器是BootClassLoader.BootClassLoader是PathClassLoader内部类,无法被重写.
+- Android应用启动时,默认父构造器时PathClassLoader,且其父加载器是BootClassLoader.BootClassLoader是PathClassLoader内部类(这和JVM不一样,在JVM中BootClassLoader由C++编写),无法被重写.
 - InMemoryDexClassLoader是API 26新增的类加载器
 - DelegateLastClassLoader是API 27后新增
 
-# 数据结构与设计
+## 简述Dalvik下BaseDexClassLoader加载dex的过程
+
+Dex的加载是由BaseDexClassLoader完成的,在够BaseDexClassLoader的构造函数中会创建DexPathList的变量pathList其中在DexPathList的构造方法中会调用`DexPathList#makeDexElements()`,在`makeDexElements()`方法中会调用`loadDexFile()`来对.dex/.jar/.zip/.apk进行处理.
+
+在`loadDexFile()`中,首先通过`optimizedPathFor()`来对optimizedDiretcory路径进行修正,之后通过DexFile的静态方法`loadDex()`正式进行Dex加载,加载完成后将返回一个DexFile对象.该方法内部其实就是调用DexFile的构造方法:
+
+```java
+    static DexFile loadDex(String sourcePathName, String outputPathName,
+        int flags, ClassLoader loader, DexPathList.Element[] elements) throws IOException {
+        return new DexFile(sourcePathName, outputPathName, flags, loader, elements);
+    }
+
+	private DexFile(String sourceName, String outputName, int flags, ClassLoader loader,
+            DexPathList.Element[] elements) throws IOException {
+       	.......
+        mCookie = openDexFile(sourceName, outputName, flags, loader, elements);
+    }
+
+    private static Object openDexFile(String sourceName, String outputName, int flags,
+            ClassLoader loader, DexPathList.Element[] elements) throws IOException {
+     
+        return openDexFileNative(new File(sourceName).getAbsolutePath(),
+                                 (outputName == null)
+                                     ? null
+                                     : new File(outputName).getAbsolutePath(),
+                                 flags,
+                                 loader,
+                                 elements);
+     }
+
+	private static native Object openDexFileNative(String sourceName, 
+                                                   String outputName, 
+                                                   int flags,
+            ClassLoader loader, DexPathList.Element[] elements);
+
+```
+
+在DexFile的构造方法中最重要的是调用调用本地方法`openDexFileNative()`,来打开Dex文件.在`openDexFileNative()`中将分别对后缀为.dex/.zip/.jar/.apk进行处理:
+
+- .dex文件通过`dvmRawDexFileOpen()`函数进行处理
+
+  在`dvmRawDexFileOpen()`函数中,将会检验dex文件的标志,检验odex文件的缓存名称,然后将dex文件拷贝到odex文件中,并对该odex进行优化.最终调用`dvmDexFileOpenFromFd()`对优化后的odex文件进行映射,通过mprotect置为"只读"属性并将映射的内存结构保存在`DvmDex`结构中.
+
+- .zip/.jar/.apk通过`dvmJarFileOpen()`函数进行处理
+
+  在`dvmJarFileOpen()`中首先对文件进行映射,并将其结构保存在ZipArchive中,接下来尝试以文件名作为dex文件名来打开文件,如果打开失败,就调用`dexZipFindEntry()`函数在ZipArchive的名称hash表中找名为"class.dex"的文件,然后创建odex文件,之后的流程就和`dvmRawDexFileOpen()`一样.
+
+上述过程完后后,最终得到DexFile可以认为是Dex优化后的odex在Java层的表示.整个加载过程中最关键的是Native层对Dex的加载及优化,细节较多,先于篇幅不做展开说明,简单总结下,如下所示
+
+```shell
+BaseDexClassLoader -> DexPathList#makeDexElements -> DexPathList#loadDexFile
+-> DexFile#openDexFile -> DexFile#openDexFileNative
+```
+
+## 简述BaseDexClassLoader加载类过程
+
+无论是PathClassLoader和是DexClassLoader,其类加载的流程都是在父类BaseDexClassLoader中实现.
+
+```java
+public class BaseDexClassLoader extends ClassLoader {
+        private final DexPathList pathList;
+ 
+        public BaseDexClassLoader(String dexPath, File optimizedDirectory,
+            String librarySearchPath, ClassLoader parent, boolean isTrusted) {
+        super(parent);
+        this.pathList = new DexPathList(this, dexPath, librarySearchPath, null, isTrusted);
+		......
+    }
+}
+```
+
+在BaseDexClassLoader存在重要的成员变量pathList.pathList是DexPathList类型的,其中它中包含一个DexPathList.Element类型的数组.每个Element代表加载的Dex及优化后Dex文件.
+
+```java
+ static class Element {
+        // file 是dex的路径
+        public final File file;
+        public final ZipFile zipFile;
+        // dexFile代表dex优化后odex文件
+        public final DexFile dexFile;
+        
+        ......
+ }
+```
+
+简单来说,DexPathList包含了所有被加载到内存中Dex文件.当需要查找类时,只需要遍历DexPathList中所有的DexFile,然后从DexFile中查找我们需要的类即可,如下:
+
+```java
+//  DexPathList#findClass
+public Class<?> findClass(String name, List<Throwable> suppressed) {
+      for (Element element : dexElements) {
+          Class<?> clazz = element.findClass(name, definingContext, suppressed);
+          if (clazz != null) {
+              return clazz;
+          }
+      }
+
+      if (dexElementsSuppressedExceptions != null) {
+          suppressed.addAll(Arrays.asList(dexElementsSuppressedExceptions));
+      }
+      return null;
+ }
+
+// DexPathList.Element#findClass
+public Class<?> findClass(String name, ClassLoader definingContext, List<Throwable> suppressed) {
+    // 调用DexFile的loadClassBinaryName()进行查找
+     return dexFile != null ? dexFile.loadClassBinaryName(name, definingContext, suppressed)
+                    : null;
+ }
+```
+
+最终类加载的操作转交给DexFile:
+
+```java
+public Class loadClassBinaryName(String name, ClassLoader loader, 
+                                 List<Throwable> suppressed) {
+      return defineClass(name, loader, mCookie, this, suppressed);
+}
+
+private static Class defineClass(String name, ClassLoader loader, Object cookie,
+                                     DexFile dexFile, List<Throwable> suppressed) {
+      Class result = null;
+      try {
+          // 由本地方法defineClassNative()实现最终加载操作
+          result = defineClassNative(name, loader, cookie, dexFile);
+       } catch (NoClassDefFoundError e) {
+          if (suppressed != null) {
+              suppressed.add(e);
+          }
+       } catch (ClassNotFoundException e) {
+          if (suppressed != null) {
+              suppressed.add(e);
+          }
+      }
+      return result;
+}
+```
+
+不难看出最终负责类加载的是DexFile的本地方法`defineClassNative()`.简单总结下:
+
+```shell
+BaseDexClassLoader#findClass -> DexPathList#findClass -> Element#findClass -> DexFile#loadClassBinaryName -> DexFile#defineClass -> DexFile#defineClassNative
+```
+
+# Android数据结构与设计
 
 ### ArrayMap的实现原理是什么?
 
 ###LruCache底层实现原理?
 
-### 如何定制一个高效的线程池?线程池中几个参数的定义.
 
-### 插件化原理
-
-### 热修复原理
-
-### 组件化原理?
 
 ### 了解Room架构么?
 
@@ -483,6 +1017,14 @@ public class PathClassLoader extends BaseDexClassLoader {
 -----
 
 # 开源框架
+
+## 插件与热修复
+
+### 插件化原理
+
+### 热修复原理
+
+## 组件化开发
 
 ## 网络框架
 
@@ -563,13 +1105,15 @@ public class PathClassLoader extends BaseDexClassLoader {
 
 ### Glide加载长图与图片背景色
 
-### 数据库框架
+## 响应式框架
 
-### 响应式框架
+## 注解框架
 
-### 注解框架
+### 简述运行时注解和编译时注解
 
-#### 如何实现一个findViewById注解
+### BufferKnife框架原理
+
+### EventBus实现原理
 
 ### 路由框架
 
@@ -577,7 +1121,11 @@ public class PathClassLoader extends BaseDexClassLoader {
 
 ###内存检测
 
-####LeakCanary实现原理
+#### LeakCanary实现原理
+
+LeakCanary是用来检测内存泄露的工具,其主要针对于Activity对象产生的内存泄露,当然我们也可以用它来检测其他对象.其实现原理主要涉及两个知识点:一是如何检测对象是否被正常回收,而是如何监控每个Activity的`onDestroy()`的执行以便来触发检测
+
+对于检测对象是否被回收可以通过WeakReference+ReferenceQueue的方式来实现,而监控Activity生命周期则可以通过ActivityLifecycleCallbacks来实现.实际上LeakCanary也正是如此实现的,在检测到Activity的`onDestroy()`后,将当期Activity对象封装在KeyedWeakReference(KeyedWeakReference是基于WeakReference实现的),并关联到ReferenceQueue,然后根据ReferenceQueue中元素的情况来判断是否已经被回收.如果检测到没有回收,那么会主动发起一次GC,并再次检测,如果还没被回收则会dump相关的内存信息进行分析,具体分析原理可见[haha](https://github.com/square/haha).
 
 ### 其他
 
@@ -593,21 +1141,42 @@ public class PathClassLoader extends BaseDexClassLoader {
 
 ## 进程保活
 
+随着厂商对进程管理策略越来越严格,基本上可认为之前的保活方案成功率都不高.事实上,多数的APP不需要常驻,提高APP内容质量和性能才是应该发展的方向.
 
+- 利用 Activity 提升权限,屏幕锁屏时创建一个像素透明的Activity,使得系统误认为当前应用比较重要而减少被杀的可能性
+- 使用前台Service,对于像滴滴打车这种产品,在通知栏显示车辆信息就是如此
+- 监控系统广播,利用系统广播拉活,该方案对于8.0及以后机器可行性很小,再加上各种广播管控,可作为辅助方案
+- 利用第三方广播,有些应用比如微信基本上在各大手机都设置了白名单,如果你可以监控他们发出的广播就可以实现拉活了,但是可行性不高.因为目前稍微有点安全意识的都是采用应用内广播的.
+- 利用Service进行拉活,在其`onStartCommand()`返回Service.START_STICKY.但是如果该Service被频繁杀死,后续系统将不会拉起该Service,除此之外该Service所在进程很可能被禁止导致根本起不来
+- 利用Native进程进行拉活,利用fork机制在Native层创建一个子进程.主线程启动时创建文件锁并持有,当Native层的子进程检测到可以获得该文件锁时,意味着主进程已经挂了,此时就可以拉起该应用了.Android 5.0之后该方案基本作废,按组杀进程时,该应用对应的所有进程都会被杀死.
+- 利用JobScheduler机制拉活,在原生Android系统中还是比较靠谱的,但是由于国内基本都对其进行了管控,因此也不定靠谱.
+- 利用Android账号机制进行拉活.Android N后该方案失效.
 
-### 如何压缩APK的大小?
+## 如何压缩APK的大小?
 
-### 有哪些打渠道包的方案?如何提高打包速度?
+大凡APK,内部无非都离不开两部分:代码和资源.因此优化的角度也要从这两点触发.
 
-### 如何排查内存泄漏问题?
+- 从代码角度
 
-###没有给权限如何定位，特定机型定位失败，如何解决 
+  良好的编程习惯,进来不要存在重复代码,及时删废弃起代码,谨慎的使用第三方库.善用proguard,开启代码优化和压缩功能.如果有用到so库,仔细考虑要支持的平台架构,比如选择支持armabi.
+
+- 从资源角度
+
+  善用Lint工具,检测无效和重复的资源文件,对于不用的文件及时删除.在使用图片之前,考虑再次进行压缩.很多时候给到的UI资源是很大的,此外根据实际情况来使用哪种图片:png还是jpeg.善用.9图片.如有必要,可以考虑webp.从适配的角度,有选择性的提供hdpi,xhdpi,xxhdpi的图片资源,优先提供xhdpi的图片,其他酌情处理,多复用少添加.能通过代码实现或者变化的图片,就通过代码去做.
+
+## 有哪些打渠道包的方案?如何提高打包速度?
+
+### 没有给权限如何定位，特定机型定位失败，如何解决
 
 ### 谈谈你对Bitmap的理解，以及bitmap.recycle()的工作原理？
 
-## 如何高效的加载图片资源？
+### 如何高效的加载图片资源？
 
 ### 现在需要遍历SD卡下所有的文件打印出后缀名为.txt文件名称，如何提高时间效率？
+
+### 如何统计应用冷启动时间
+
+
 
 
 
