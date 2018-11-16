@@ -125,9 +125,9 @@ Activity实例是由系统自动创建,并在不同的状态期间回调相应�
 LancheMode即所谓的启动模式,系统会根据该模式来控制Activity打开时对任务栈的影响.该选项有以下四个值选项:standard,singleTop,singleTask,singleInstance.其含义如下:
 
 1. standard:默认模式,每次启动都会创建一个新的activity对象,放到目标任务栈中
-2. singleTop:判断当前的任务栈顶是否存在相同的activity对象,如果存在,则直接使用;如果不存在,那么创建新的activity对象放入栈中
-3. singleTask:在任务栈中会判断是否存在相同的activity,如果存在,那么会清除该activity之上的其他activity对象显示;如果不存在,则会创建一个新的activity放入栈顶
-4. singleIntance:会在一个新的任务栈中创建activity,并且该任务栈种只允许存在一个activity实例,其他调用该activity的组件会直接使用该任务栈种的activity对象
+2. singleTop:判断当前的任务栈顶是否存在相同的activity对象,如果存在,则直接使用,会调用`onNewIntent()`;如果不存在,那么创建新的activity对象放入栈中.适合于消息推送页等.
+3. singleTask:在任务栈中会判断是否存在相同的activity,如果存在,那么会清除该activity之上的其他activity对象显示;如果不存在,则会创建一个新的activity放入栈顶,适合于应用主页等.
+4. singleIntance:会在一个新的任务栈中创建activity,并且该任务栈种只允许存在一个activity实例,其他调用该activity的组件会直接使用该任务栈种的activity对象,适合于闹钟等场景.
 
 控制任务栈的方式有两种方式,一种是在manifest中配置android:launchMode="standard|singleInstance|single Task|singleTop"来控制Acivity任务栈,另一种则是在启动Activity的Intent中指定Intent Flags:
 
@@ -478,7 +478,13 @@ ContentProvider以某种Uri的形式对外提供数据,允许其他应用访问�
 
 ### mipmap文件夹和drawable文件加的区别
 
-### 
+## 其他
+
+### Android为什么引入Parcelable？。
+
+Java原生提供的Serializable序列化机制,可能会触发频繁的IO操作,效率比较低,适合将对象存储到磁盘上的情况,但不适合进程间数据传递.
+
+Parcelable是Android提供一套序列化机制,它将序列化后的字节流写入到一个共享内存中,其他对象可以从这块共享内存中读出字节流,并反序列化成对象,因此效率比较高,适合在对象间或者进程间传递信息。
 
 # 数据存储系列
 
