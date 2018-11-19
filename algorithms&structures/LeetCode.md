@@ -1,4 +1,380 @@
-## 比特与2比特字符
+# 字符串
+
+## 转成小写字母
+
+实现函数 ToLowerCase()，该函数接收一个字符串参数 str，并将该字符串中的大写字母转换成小写字母，之后返回新的字符串。
+
+ 
+
+**示例 1：**
+
+```
+输入: "Hello"
+输出: "hello"
+```
+
+**示例 2：**
+
+```
+输入: "here"
+输出: "here"
+```
+
+**示例** **3：**
+
+```
+输入: "LOVELY"
+输出: "lovely"
+```
+
+解答思路:字符串在java中统一用unicode表示( 即utf-16 LE) ，而小写字母a的值比大写字母的值大32.
+
+```java
+class Solution {
+    public String toLowerCase(String str) {
+        if(str == null){
+            return null;
+        }
+        char[] charArr = str.toCharArray();
+        for(int i=0;i<charArr.length;i++){
+            if(charArr[i]>='A'&&charArr[i]<='Z'){
+                charArr[i]=(char)(charArr[i]+32);
+            }
+        }
+        return new String(charArr);
+    }
+}
+```
+
+## 反转字符串
+
+编写一个函数，其作用是将输入的字符串反转过来。
+
+**示例 1:**
+
+```
+输入: "hello"
+输出: "olleh"
+```
+
+**示例 2:**
+
+```
+输入: "A man, a plan, a canal: Panama"
+输出: "amanaP :lanac a ,nalp a ,nam A"
+```
+
+解答思路: 最简单的思路是遍历字符数组,从后往前输出,此外你要知道StringBuilder提供了反转操作.
+
+```java
+class Solution {
+    public String reverseString(String s) {
+        return new StringBuilder(s).reverse().toString();
+    }
+}
+```
+
+
+
+## 反转字符串中的单词 III
+
+给定一个字符串，你需要反转字符串中每个单词的字符顺序，同时仍保留空格和单词的初始顺序。
+
+**示例 1:**
+
+```
+输入: "Let's take LeetCode contest"
+输出: "s'teL ekat edoCteeL tsetnoc" 
+```
+
+**注意：**在字符串中，每个单词由单个空格分隔，并且字符串中不会有任何额外的空格。
+
+解答思路:在反转单个字符串的基础上进行的扩展.分割成字符串数组后,依次反转即可.
+
+```java
+class Solution {
+    public String reverseWords(String s) {
+        String[] strArr = s.split(" ");
+        StringBuilder builder = new StringBuilder();
+        for(int i=0;i<strArr.length;i++){
+            builder.append(reverse(strArr[i])).append(" "); 
+        }
+        return builder.toString().trim();
+    }
+    
+    private StringBuilder reverse(String word){
+        return new StringBuilder(word).reverse();
+    }
+}
+```
+
+
+
+## 检测大写字母
+
+给定一个单词，你需要判断单词的大写使用是否正确。
+
+我们定义，在以下情况时，单词的大写用法是正确的：
+
+1. 全部字母都是大写，比如"USA"。
+2. 单词中所有字母都不是大写，比如"leetcode"。
+3. 如果单词不只含有一个字母，只有首字母大写， 比如 "Google"。
+
+否则，我们定义这个单词没有正确使用大写字母。
+
+**示例 1:**
+
+```
+输入: "USA"
+输出: True
+```
+
+**示例 2:**
+
+```
+输入: "FlaG"
+输出: False
+```
+
+**注意:** 输入是由大写和小写拉丁字母组成的非空单词。
+
+解答思路:一开始能考虑到的是两种情况:第一个字符是小写字母,其余的字母只能是小写才正确;第一个字符是大写字母的情况下,剩余字母全部是小写或者大写,加入一个计数器,遇到大写字符计数器加1,遇到小写字符,计数器减1,当计数器为字符长度-1时,意味着都是剩余字符都是大写或者小写.
+
+```java
+class Solution {
+    public boolean detectCapitalUse(String word) {
+        if(word.length()==1){
+            return true;
+        }
+        char frist = word.charAt(0);
+        if(isLowerChar(frist)){
+            for(int i=1;i<word.length();i++){
+                if(isUpperChar(word.charAt(i))){
+                    return false;
+                }
+            }
+            return true;
+        }else {
+            int count =0;
+            for(int i=1;i<word.length();i++){
+                if(isUpperChar(word.charAt(i))){
+                    count ++;
+                }
+                if(isLowerChar(word.charAt(i))){
+                    count --;
+                }
+            }
+     
+            if(Math.abs(count) == word.length()-1){
+                return true;
+            }else {
+                return false;
+            }
+        }
+             
+    }
+    
+    private boolean isLowerChar(char ch){
+        if(ch >= 'a' && ch <= 'z'){
+            return true;
+        }
+        return false;
+    }
+    
+    private boolean isUpperChar(char ch){
+        if(ch >= 'A' && ch <= 'Z'){
+            return true;
+        }
+        return false;
+    }
+}
+```
+
+在上述基础上,再来抽象一下.正确的单词中,大写字符的数目等于单词长度(全是大写),或者等于0(全是小写),或者等于1且首字符为大写.同样,采用计数器来统计大写字符数量.
+
+```java
+class Solution {
+    
+    public boolean detectCapitalUse(String word) {
+        if ( word == null || word == "" ) return false;
+        if (word.length() == 1 ) return true;
+        int count = 0;
+        for (int i = 0; i < word.length(); i++) {
+            if (word.charAt(i) <= 'Z' && word.charAt(i) >= 'A')
+                count++;
+        }
+        
+        if (count == word.length() || (count == 1 && word.charAt(0) >= 'A' && word.charAt(0) <= 'Z') || count == 0)
+            return true;
+        return false;
+    }
+}
+```
+
+## 最后一个单词的长度
+
+给定一个仅包含大小写字母和空格 `' '` 的字符串，返回其最后一个单词的长度。
+
+如果不存在最后一个单词，请返回 0 。
+
+**说明：**一个单词是指由字母组成，但不包含任何空格的字符串。
+
+**示例:**
+
+```
+输入: "Hello World"
+输出: 5
+```
+
+解答思路:直接使用split()分割单词当然可以.但实际上我们要计算的是最后一个空格出现之后字符串的长度,所以一种简单写法如下:
+
+```java
+class Solution {
+    public int lengthOfLastWord(String s) {
+        if( s == null){
+            return 0;
+        }
+        s = s.trim();
+        int lastIndex = s.lastIndexOf(' ');
+        if( lastIndex == 0){
+            return s.length();
+        }
+        return s.substring(lastIndex+1).length();
+    }
+}
+```
+
+## 字符串中的单词树
+
+统计字符串中的单词个数，这里的单词指的是连续的不是空格的字符。
+
+请注意，你可以假定字符串里不包括任何不可打印的字符。
+
+**示例:**
+
+```java
+输入: "Hello, my name is John"
+输出: 5
+```
+
+解答思路:根据单词的特点,我们可以加入两个指针,一个用来标记进入一个单词,一个用来比较立刻一个单词.当遇到非空格时,表明进入单词,否则表明立开一个单词.需要注意,对于只有一个单词的情况,只有进入没有退出操作.
+
+```java
+class Solution {
+    public int countSegments(String s) {
+        if(s == null || s.length() == 0){
+            return 0;
+        }
+        int count =0;	// 单词计数器
+        char in = 0;	// 单词进入
+        char out = 0;	// 单词离开
+        for (int i=0;i<s.length();i++){
+            char tmp = s.charAt(i);
+            if(tmp != ' '){
+                in = 1;
+                out =1;
+            }else{
+                out = 0;
+            }
+            if(in ==1&&out ==0){
+                count++;
+                in =0;
+            }         
+        }
+        // 对于"hello"这种字符串,由于无法标记离开操作,因此在in为1时,增加count值即可.
+        return in == 1?count+1:count;
+    }
+}
+```
+
+除此之外,还可以借助正则表达式,对字符串进行切分:
+
+```java
+class Solution {
+    public int countSegments(String s) {
+        if(s == null || s.length() == 0){
+            return 0;
+        }
+        return s.trim().length() == 0?0:s.trim().split("\\s+").length;
+    }
+}
+```
+
+## 学生出勤记录I
+
+给定一个字符串来代表一个学生的出勤纪录，这个纪录仅包含以下三个字符：
+
+1. **'A'** : Absent，缺勤
+2. **'L'** : Late，迟到
+3. **'P'** : Present，到场
+
+如果一个学生的出勤纪录中不**超过一个'A'(缺勤)**并且**不超过两个连续的'L'(迟到)**,那么这个学生会被奖赏。
+
+你需要根据这个学生的出勤纪录判断他是否会被奖赏。
+
+**示例 1:**
+
+```
+输入: "PPALLP"
+输出: True
+```
+
+**示例 2:**
+
+```
+输入: "PPALLL"
+输出: False
+```
+
+解答思路:该题比较简单,理解题意后可知以下两种情况返回false即可:
+
+- 对字符串中的字符A计数,出现两个以上A就返回false
+- 对字符串中的连续L计数,连续两个以上L返回false
+
+在该思路下,代码如下所示:
+
+```java
+class Solution {
+    public boolean checkRecord(String s) {
+        int countA =0;
+        int countL =0;
+        for(int i=0;i<s.length();i++){
+            char ch =s.charAt(i);
+            if(ch == 'A'){
+                countA++;
+                countL=0;
+                if(countA>1){
+                    return false;
+                }
+            }else if(ch == 'L'){
+                countL++;
+                if(countL > 2){
+                    return false;
+                }
+            }else {
+                countL =0;
+            }
+        }
+        return true;
+    }
+}
+```
+
+此外重新解读这句话:**超过一个'A'(缺勤)**并且**不超过两个连续的'L'(迟到)**,当A不存在时,其在字符串的索引应该为-1,当A只有一个时,通过`indexOf()`和`lastIndexOf()`返回的同一个位置;此外,LLL在字符串的索引应该为-1.同时满足这两者时返回true,否则返回false.
+
+```java
+class Solution {
+    public boolean checkRecord(String s) {
+        return s.indexOf('A') == s.lastIndexOf('A') && s.indexOf("LLL") == -1;
+    }
+}
+```
+
+这两种思路本质上是一样,从正反两个条件进行思路,一个是或操作,一个是与操作.
+
+
+
+##  比特与2比特字符
 
 有两种特殊字符。第一种字符可以用一比特`0`来表示。第二种字符可以用两比特(`10` 或 `11`)来表示。
 
@@ -602,5 +978,1042 @@ class Solution {
 }
 ```
 
+## 找到所有数组中消失的数字
 
+给定一个范围在  1 ≤ a[i] ≤ *n* ( *n* = 数组大小 ) 的 整型数组，数组中的元素一些出现了两次，另一些只出现一次。
+
+找到所有在 [1, *n*] 范围之间没有出现在数组中的数字。
+
+您能在不使用额外空间且时间复杂度为*O(n)*的情况下完成这个任务吗? 你可以假定返回的数组不算在额外空间内。
+
+**示例:**
+
+```
+输入:
+[4,3,2,7,8,2,3,1]
+
+输出:
+[5,6]
+```
+
+解答思路:在不使用额外空间的情况下,原数组要想表示更多的信息,最典型的做法是要将数组中的元素值和索引建立联系起来,但前提是元素值满足1 ≤ a[i] ≤ *n*,因此该题的解决思路就是讲元素值转为数组的索引,比如示例中的4变成索引值3,然后对索引值为3处的元素取反,即将元素值变为-7,此时原数组为[4,3,2,-7,8,2,3,1],通过这种方式,最终只需要遍历最后的数组,如果某个索引值index对应的元素是非负数,即原数组中不存在index+1这个数.
+
+代码如下:
+
+```java
+class Solution {
+    public List<Integer> findDisappearedNumbers(int[] nums) {
+        List<Integer> result=new ArrayList();
+        for(int i=0;i<nums.length;i++){
+            int index=nums[i]>0?nums[i]:-nums[i];
+            // index等于元素值-1
+            index--;
+            if(nums[index]>0){
+                nums[index]=-nums[index];
+            }       
+        }
+        for(int i=0;i<nums.length;i++){
+            if(nums[i]>0){
+                result.add(i+1);
+            }
+        }
+        return result;
+    }
+}
+```
+
+## 两个数组的交集
+
+给定两个数组，编写一个函数来计算它们的交集。
+
+**示例 1:**
+
+```
+输入: nums1 = [1,2,2,1], nums2 = [2,2]
+输出: [2]
+```
+
+**示例 2:**
+
+```
+输入: nums1 = [4,9,5], nums2 = [9,4,9,8,4]
+输出: [9,4]
+```
+
+**说明:**
+
+- 输出结果中的每个元素一定是唯一的。
+- 我们可以不考虑输出结果的顺序。
+
+解答思路:第一种思路是将一个数组放到Map结构中,然后遍历第二个数组,利用Map结构不存在重复元素的特性来统计.另外一种是分别对数组进行排序,遍历其中一个数组,使用二分查找元素是否存在于另一个数组中.
+
+```java
+class Solution {
+    public int[] intersection(int[] nums1, int[] nums2) {
+        
+        Set<Integer> result = new HashSet();
+        Arrays.sort(nums1);
+        Arrays.sort(nums2);
+       
+        for (int i=0;i<nums1.length;i++){
+                if(Arrays.binarySearch(nums2,nums1[i])>=0){
+                    result.add(nums1[i]);
+                }
+            }
+        
+        return toArray(result);
+    }
+    
+    private int[] toArray(Set<Integer> set){
+        int[] result =new int[set.size()];
+        int index=0;
+        for(Integer in: set){
+            result[index]=in;
+            index++;
+        }
+        return result;
+    }
+}
+```
+
+
+
+
+
+# 链表
+
+## 删除链表中的节点
+
+请编写一个函数，使其可以删除某个链表中给定的（非末尾）节点，你将只被给定要求被删除的节点。
+
+现有一个链表 -- head = [4,5,1,9]，它可以表示为:
+
+```
+    4 -> 5 -> 1 -> 9
+```
+
+**示例 1:**
+
+```
+输入: head = [4,5,1,9], node = 5
+输出: [4,1,9]
+解释: 给定你链表中值为 5 的第二个节点，那么在调用了你的函数之后，该链表应变为 4 -> 1 -> 9.
+```
+
+**示例 2:**
+
+```
+输入: head = [4,5,1,9], node = 1
+输出: [4,5,9]
+解释: 给定你链表中值为 1 的第三个节点，那么在调用了你的函数之后，该链表应变为 4 -> 5 -> 9.
+```
+
+**说明:**
+
+- 链表至少包含两个节点。
+- 链表中所有节点的值都是唯一的。
+- 给定的节点为非末尾节点并且一定是链表中的一个有效节点。
+- 不要从你的函数中返回任何结果
+
+解答思路:当要删除一个节点时,对需要该节点而言,我们只需要用下一个节点的数值赋值当前节点即可.
+
+```java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public void deleteNode(ListNode node) {
+       // node为要删除的节点,只需要用node节点的下一个节点元素的值覆盖node节点即可实现删除操作 
+       node.val=node.next.val;
+       node.next=node.next.next;
+    }
+}
+```
+
+
+
+# 二分查找
+
+## 二分查找算法
+
+给定一个 `n` 个元素有序的（升序）整型数组 `nums` 和一个目标值 `target`  ，写一个函数搜索 `nums` 中的 `target`，如果目标值存在返回下标，否则返回 `-1`。
+
+
+**示例 1:**
+
+```
+输入: nums = [-1,0,3,5,9,12], target = 9
+输出: 4
+解释: 9 出现在 nums 中并且下标为 4
+```
+
+**示例 2:**
+
+```
+输入: nums = [-1,0,3,5,9,12], target = 2
+输出: -1
+解释: 2 不存在 nums 中因此返回 -1
+```
+
+ 
+
+**提示：**
+
+1. 你可以假设 `nums` 中的所有元素是不重复的。
+2. `n` 将在 `[1, 10000]`之间。
+3. `nums` 的每个元素都将在 `[-9999, 9999]`之间。
+
+解答思路:典型的二分查找,代码如下:
+
+```java
+class Solution {
+    public int search(int[] nums, int target) {
+        int left=0;
+        int right=nums.length-1;
+        while(left<=right){
+            int partion=left+(right-left)/2;
+            if(nums[partion]==target){
+                return partion;
+            }else if(target<nums[partion]){
+                right=partion-1;
+            }else if(target>nums[partion]){
+                left=partion+1;
+            }
+        }
+        return -1;
+    }
+}
+```
+
+## 搜索二维矩阵
+
+编写一个高效的算法来搜索 *m* x *n* 矩阵 matrix 中的一个目标值 target。该矩阵具有以下特性：
+
+- 每行的元素从左到右升序排列。
+- 每列的元素从上到下升序排列。
+
+**示例:**
+
+现有矩阵 matrix 如下：
+
+```
+[
+  [1,   4,  7, 11, 15],
+  [2,   5,  8, 12, 19],
+  [3,   6,  9, 16, 22],
+  [10, 13, 14, 17, 24],
+  [18, 21, 23, 26, 30]
+]
+```
+
+给定 target = `5`，返回 `true`。
+
+给定 target = `20`，返回 `false`。
+
+解答思路:有组每行每列的数组都是有序的,因此我们可以考虑二分查找的方式.
+
+```java
+class Solution {
+    public boolean searchMatrix(int[][] matrix, int target) {
+        int rows = matrix.length;
+        for (int i=0;i<rows;i++){
+            if(Arrays.binarySearch(matrix[i],target) >=0){
+                return true;
+            }
+        }
+        return false;
+    }
+    
+}
+```
+
+
+
+# 二叉树
+
+## 二叉树最大深度
+
+给定一个二叉树，找出其最大深度。
+
+二叉树的深度为根节点到最远叶子节点的最长路径上的节点数。
+
+**说明:** 叶子节点是指没有子节点的节点。
+
+**示例：**
+给定二叉树 `[3,9,20,null,null,15,7]`，
+
+```
+    3
+   / \
+  9  20
+    /  \
+   15   7
+```
+
+返回它的最大深度 3 。
+
+解答思路:对于这种问题,递归是最简单的思想.
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public int maxDepth(TreeNode root) {
+        if(root == null){
+            return 0;
+        }
+        return Math.max(maxDepth(root.left),maxDepth(root.right))+1;
+    }
+}
+```
+
+- 时间复杂度：我们每个结点只访问一次，因此时间复杂度为O(N)， 其中 N是结点的数量。
+- 空间复杂度：在最糟糕的情况下，树是完全不平衡的，*例如*每个结点只剩下左子结点，递归将会被调用 N次（树的高度），因此保持调用栈的存储将是 O(N)。但在最好的情况下（树是完全平衡的），树的高度将是 log(N)。因此，在这种情况下的空间复杂度将是 O(log(N))。
+
+## 反转二叉树
+
+翻转一棵二叉树。
+
+**示例：**
+
+输入：
+
+```
+     4
+   /   \
+  2     7
+ / \   / \
+1   3 6   9
+```
+
+输出：
+
+```
+     4
+   /   \
+  7     2
+ / \   / \
+9   6 3   1
+```
+
+解答思路:对于树这种结构,递归是最简单的解题思路
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public TreeNode invertTree(TreeNode root) {
+        if(root == null){
+            return null;
+        }
+        TreeNode tmp=root.left;
+        root.left=root.right;
+        root.right=tmp;
+        invertTree(root.left);
+        invertTree(root.right);
+        return root;
+    }
+    
+}
+```
+
+## 合并二叉树
+
+给定两个二叉树，想象当你将它们中的一个覆盖到另一个上时，两个二叉树的一些节点便会重叠。
+
+你需要将他们合并为一个新的二叉树。合并的规则是如果两个节点重叠，那么将他们的值相加作为节点合并后的新值，否则**不为** NULL 的节点将直接作为新二叉树的节点。
+
+**示例 1:**
+
+```
+输入: 
+	Tree 1                     Tree 2                  
+          1                         2                             
+         / \                       / \                            
+        3   2                     1   3                        
+       /                           \   \                      
+      5                             4   7                  
+输出: 
+合并后的树:
+	     3
+	    / \
+	   4   5
+	  / \   \ 
+	 5   4   7
+```
+
+**注意:** 合并必须从两个树的根节点开始。
+
+解答思路:对于合并二叉树时,将问题范围缩小,先考虑如何合并两个TreeNode,在这期间需要考三种情况:_
+
+- 两棵树对应节点都存在的情况
+- 对应位置t1树存在,t2不存在
+- 对应位置t1树不存在,t2存在
+
+接下就是要用递归的方式写出来.
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public TreeNode mergeTrees(TreeNode t1, TreeNode t2) {
+        if(t1==null&&t2==null){ // 都不存在
+            return null;
+        }
+        if(t1==null&&t2!=null){ //t1不存在,t2存在
+            return t2;
+        }
+        if(t1!=null&&t2==null){ //t1存在,t2存在
+            return t1;
+        }
+       
+        t1.val+=t2.val;
+        t1.left=mergeTrees(t1.left,t2.left);
+        t1.right=mergeTrees(t1.right,t2.right);
+        return t1;
+    }
+    
+}
+```
+
+## N叉树的前序遍历
+
+给定一个 N 叉树，返回其节点值的*前序遍历*。
+
+例如，给定一个 `3叉树` :
+
+ 
+
+![img](https://assets.leetcode-cn.com/aliyun-lc-upload/uploads/2018/10/12/narytreeexample.png)
+
+ 
+
+返回其前序遍历: `[1,3,5,6,2,4]`。
+
+ 
+
+**说明:** 递归法很简单，你可以使用迭代法完成此题吗?
+
+解答思路:对于前序遍历而言,每次首先访问根节点,然后再访问子节点.
+
+```java
+/*
+// Definition for a Node.
+class Node {
+    public int val;
+    public List<Node> children;
+
+    public Node() {}
+
+    public Node(int _val,List<Node> _children) {
+        val = _val;
+        children = _children;
+    }
+};
+*/
+class Solution {
+    public List<Integer> preorder(Node root) {
+        if(root==null){
+            return Collections.emptyList();
+        }
+        List<Integer> result =new ArrayList<Integer>();
+        result.add(root.val);
+        for (int i=0;i<root.children.size();i++){
+            result.addAll(preorder(root.children.get(i)));
+        }
+        return result;
+    }
+}
+```
+
+当然也可以采用迭代的方式,使用栈结构模拟即可:
+
+```java
+class Solution {
+    public List<Integer> preorder(Node root) {
+        Stack<Node> stack = new Stack<Node>();
+        List<Integer> result=new ArrayList();
+        if(root==null){
+            return result;
+        }
+        stack.push(root);
+        while(!stack.isEmpty()){
+            Node cur=stack.pop();
+            result.add(cur.val);
+            for(int i=cur.children.size()-1;i>=0;i--){
+             stack.push(cur.children.get(i));
+            }
+        }
+        return result;   
+    }
+}
+```
+
+
+给定一个 N 叉树，找到其最大深度。
+
+最大深度是指从根节点到最远叶子节点的最长路径上的节点总数。
+
+例如，给定一个 `3叉树` :
+
+ 
+
+![img](https://assets.leetcode-cn.com/aliyun-lc-upload/uploads/2018/10/12/narytreeexample.png)
+
+ 
+
+我们应返回其最大深度，3。
+
+**说明:**
+
+1. 树的深度不会超过 `1000`。
+2. 树的节点总不会超过 `5000`。
+
+```java
+/*
+// Definition for a Node.
+class Node {
+    public int val;
+    public List<Node> children;
+
+    public Node() {}
+
+    public Node(int _val,List<Node> _children) {
+        val = _val;
+        children = _children;
+    }
+};
+*/
+class Solution {
+   
+    public int maxDepth(Node root) {
+        if(root == null){
+            return 0;
+        }
+        int max=0;
+        for(Node child :root.children){
+            int childDepth=maxDepth(child);
+            max=Math.max(max,childDepth);
+        }
+        return max+1;
+    }
+}
+```
+
+## 二叉树层次遍历
+
+给定一个二叉树，返回其节点值自底向上的层次遍历。 （即按从叶子节点所在层到根节点所在的层，逐层从左向右遍历）
+
+例如：
+给定二叉树 `[3,9,20,null,null,15,7]`,
+
+```
+    3
+   / \
+  9  20
+    /  \
+   15   7
+```
+
+返回其自底向上的层次遍历为：
+
+```
+[
+  [15,7],
+  [9,20],
+  [3]
+]
+```
+
+解答思路:有关层次遍历时,借助队列.
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public List<List<Integer>> levelOrderBottom(TreeNode root) {
+        List<List<Integer>> result =new ArrayList();
+        if(root ==null){
+            return result;
+        }
+        
+        List<TreeNode> curNodeList =new ArrayList();
+        curNodeList.add(root);
+        while(!curNodeList.isEmpty()){
+            List<Integer> curValList=new ArrayList();
+            List<TreeNode> nextNodeList=new ArrayList();
+            for(TreeNode cur : curNodeList){
+                curValList.add(cur.val);
+                if(cur.left!=null)nextNodeList.add(cur.left);
+                if(cur.right!=null)nextNodeList.add(cur.right);
+            }
+            result.add(0,curValList);
+            curNodeList=nextNodeList;   
+        }
+        
+        return result;
+    }  
+    
+}
+```
+
+## N叉树层序遍历
+
+给定一个 N 叉树，返回其节点值的*层序遍历*。 (即从左到右，逐层遍历)。
+
+例如，给定一个 `3叉树` :
+
+ 
+
+![img](https://assets.leetcode-cn.com/aliyun-lc-upload/uploads/2018/10/12/narytreeexample.png)
+
+ 
+
+返回其层序遍历:
+
+```
+[
+     [1],
+     [3,2,4],
+     [5,6]
+]
+```
+
+ 
+
+**说明:**
+
+1. 树的深度不会超过 `1000`。
+2. 树的节点总数不会超过 `5000`。
+
+解答思路:和二叉树层序遍历思路一样
+
+```java
+/*
+// Definition for a Node.
+class Node {
+    public int val;
+    public List<Node> children;
+
+    public Node() {}
+
+    public Node(int _val,List<Node> _children) {
+        val = _val;
+        children = _children;
+    }
+};
+*/
+class Solution {
+    public List<List<Integer>> levelOrder(Node root) {
+        List<List<Integer>> result = new ArrayList<>();
+        if(root ==null){
+            return result;
+        }
+        List<Node> curNodeList =new ArrayList();
+        curNodeList.add(root);
+        while(!curNodeList.isEmpty()){
+            List<Integer> curValList=new ArrayList();
+            List<Node> nextNodeList = new ArrayList();
+            for(Node cur : curNodeList){
+                curValList.add(cur.val);
+                nextNodeList.addAll(cur.children);
+            }
+            result.add(curValList);
+            curNodeList=nextNodeList;
+        }
+        return result;
+    }
+}
+```
+
+## 二叉树的层平均值
+
+给定一个非空二叉树, 返回一个由每层节点平均值组成的数组.
+
+**示例 1:**
+
+```
+输入:
+    3
+   / \
+  9  20
+    /  \
+   15   7
+输出: [3, 14.5, 11]
+解释:
+第0层的平均值是 3,  第1层是 14.5, 第2层是 11. 因此返回 [3, 14.5, 11].
+```
+
+**注意：**
+
+1. 节点值的范围在32位有符号整数范围内。
+
+解答思路:该问题的本质是层次遍历.
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public List<Double> averageOfLevels(TreeNode root) {
+        List<Double> result = new ArrayList();
+        if(root == null){
+            return result;
+        }
+        List<TreeNode> curNodeList = new ArrayList();
+        curNodeList.add(root);
+    
+        while(!curNodeList.isEmpty()){
+            double sum=0d;
+            List<TreeNode> list =new ArrayList();
+            for(TreeNode cur: curNodeList){
+                sum+=cur.val;
+                if(cur.left!=null)list.add(cur.left);
+                if(cur.right!=null)list.add(cur.right);
+            }
+            double avr=sum/curNodeList.size();
+            result.add(avr);
+            curNodeList=list;
+        }
+        return result;
+    }
+}
+```
+
+## 二叉树的所有路径
+
+给定一个二叉树，返回所有从根节点到叶子节点的路径。
+
+**说明:** 叶子节点是指没有子节点的节点。
+
+**示例:**
+
+```
+输入:
+
+   1
+ /   \
+2     3
+ \
+  5
+
+输出: ["1->2->5", "1->3"]
+
+解释: 所有根节点到叶子节点的路径为: 1->2->5, 1->3
+```
+
+解答思路:递归搜索的过程本身就是保证顺序的,因此用递归的方式可以方便的实现.只有当一个节点没有左右节点时,此时即认为到达了叶子节点,可以将路径添加到集合中了.
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public List<String> binaryTreePaths(TreeNode root) {
+        List<String> pathArr=new ArrayList();
+        if(root == null){
+            return pathArr;
+        }
+        findAndAdd(pathArr,root,"");
+        return pathArr;
+    }
+    
+    private void findAndAdd(List<String> paths,TreeNode root,String basePath){
+        if(root == null){
+            return ;
+        }
+        String path=basePath+root.val;
+        if(root.left!=null){
+            findAndAdd(paths,root.left,path+"->");
+        }
+        
+        if(root.right!=null){
+            findAndAdd(paths,root.right,path+"->");
+        }
+        if(root.left==null&&root.right==null){
+            paths.add(path);
+        }
+    }
+    
+    
+}
+```
+
+## 相同的树
+
+给定两个二叉树，编写一个函数来检验它们是否相同。
+
+如果两个树在结构上相同，并且节点具有相同的值，则认为它们是相同的。
+
+**示例 1:**
+
+```
+输入:       1         1
+          / \       / \
+         2   3     2   3
+
+        [1,2,3],   [1,2,3]
+
+输出: true
+```
+
+**示例 2:**
+
+```
+输入:      1          1
+          /           \
+         2             2
+
+        [1,2],     [1,null,2]
+
+输出: false
+```
+
+**示例 3:**
+
+```
+输入:       1         1
+          / \       / \
+         2   1     1   2
+
+        [1,2,1],   [1,1,2]
+
+输出: false
+```
+
+解答思路:说白了就比比较对应位置的值是否相等.使用递归时,尤其需要注意递归和停止递归的条件.
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public boolean isSameTree(TreeNode p, TreeNode q) {
+        if(p == null && q == null){
+            return true;
+        }
+        if(p == null || q == null){
+            return false;
+        }
+        if(p.val == q.val){
+            if(isSameTree(p.left,q.left) && isSameTree(p.right,q.right)){
+               return true;
+           }
+        }     
+        return false;
+    }
+}
+```
+
+## 左叶子之和
+
+计算给定二叉树的所有左叶子之和。
+
+**示例：**
+
+```
+    3
+   / \
+  9  20
+    /  \
+   15   7
+
+在这个二叉树中，有两个左叶子，分别是 9 和 15，所以返回 24
+```
+
+ 解答思路:分析好左叶子的情况以及递归的情况.
+
+```java
+class Solution {
+    int sum=0;
+    public int sumOfLeftLeaves(TreeNode root) {
+        if(root == null){
+            return sum;
+        }
+        if(root.left!=null){
+            if(root.left.left==null&&root.left.right==null){
+                sum+=root.left.val;
+            }
+        }
+        sumOfLeftLeaves(root.left);
+        sumOfLeftLeaves(root.right);
+        return sum;
+    }   
+}
+```
+
+## 路径总和
+
+给定一个二叉树和一个目标和，判断该树中是否存在根节点到叶子节点的路径，这条路径上所有节点值相加等于目标和。
+
+说明: 叶子节点是指没有子节点的节点。
+
+示例: 
+给定如下二叉树，以及目标和 sum = 22，
+
+              5
+             / \
+            4   8
+           /   / \
+          11  13  4
+         /  \      \
+        7    2      1
+返回 true, 因为存在目标和为 22 的根节点到叶子节点的路径 5->4->11->2。
+
+解答思路,考虑三种情况,根节点为null的情况,只有一个跟节点以及正常树的情况.该问题非常类似查找二叉树中所有路径中问题.
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    int sum;
+    public boolean hasPathSum(TreeNode root, int sum) {
+        if(root==null){
+            return false;
+        }
+        sum=sum-root.val;
+        if(root.left==null&&root.right==null){
+            return sum==0;
+        } 
+        return hasPathSum(root.left,sum)||hasPathSum(root.right,sum);
+    }
+}
+```
+
+# 图
+
+## 钥匙和房间?
+
+有 `N` 个房间，开始时你位于 `0` 号房间。每个房间有不同的号码：`0，1，2，...，N-1`，并且房间里可能有一些钥匙能使你进入下一个房间。
+
+在形式上，对于每个房间 `i` 都有一个钥匙列表 `rooms[i]`，每个钥匙 `rooms[i][j]` 由 `[0,1，...，N-1]` 中的一个整数表示，其中 `N = rooms.length`。 钥匙 `rooms[i][j] = v` 可以打开编号为 `v` 的房间。
+
+最初，除 `0` 号房间外的其余所有房间都被锁住。
+
+你可以自由地在房间之间来回走动。
+
+如果能进入每个房间返回 `true`，否则返回 `false`。
+
+
+
+**示例 1：**
+
+```
+输入: [[1],[2],[3],[]]
+输出: true
+解释:  
+我们从 0 号房间开始，拿到钥匙 1。
+之后我们去 1 号房间，拿到钥匙 2。
+然后我们去 2 号房间，拿到钥匙 3。
+最后我们去了 3 号房间。
+由于我们能够进入每个房间，我们返回 true。
+```
+
+**示例 2：**
+
+```
+输入：[[1,3],[3,0,1],[2],[0]]
+输出：false
+解释：我们不能进入 2 号房间。
+```
+
+**提示：**
+
+1. `1 <= rooms.length <= 1000`
+2. `0 <= rooms[i].length <= 1000`
+3. 所有房间中的钥匙数量总计不超过 `3000`。
+
+解答思路:拿到该题时,首先要读懂,本质上就是图的遍历.这里我们采用广度优先的方式.在遍历过程中,标记已经进去过的房间.
+
+```java
+class Solution {
+    public boolean canVisitAllRooms(List<List<Integer>> rooms) {
+        if(rooms == null || rooms.isEmpty()){
+            return false;
+        }
+        Queue<Integer> queue=new LinkedList();
+        boolean[] entryRooms = new boolean[rooms.size()];
+        entryRooms[0]=true;
+        
+        List<Integer> defaultKeys = rooms.get(0);
+        for (int i=0;i<defaultKeys.size();i++){
+            queue.offer(defaultKeys.get(i));
+        }
+        
+        while(!queue.isEmpty()){
+            Integer key =queue.poll();
+            if(entryRooms[key])continue;
+            entryRooms[key]=true;
+            for (Integer k : rooms.get(key)){
+                queue.offer(k);
+            }
+        }
+        
+        for (int i=0;i<entryRooms.length;i++){
+            if(!entryRooms[i]){
+                return false;
+            }
+        }
+        return true;
+    }
+}
+```
 
