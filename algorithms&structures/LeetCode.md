@@ -431,7 +431,103 @@ class Solution {
 }
 ```
 
+## 字符串相乘
 
+给定两个以字符串形式表示的非负整数 `num1` 和 `num2`，返回 `num1` 和 `num2` 的乘积，它们的乘积也表示为字符串形式。
+
+**示例 1:**
+
+```
+输入: num1 = "2", num2 = "3"
+输出: "6"
+```
+
+**示例 2:**
+
+```
+输入: num1 = "123", num2 = "456"
+输出: "56088"
+```
+
+**说明：**
+
+1. `num1` 和 `num2` 的长度小于110。
+2. `num1` 和 `num2` 只包含数字 `0-9`。
+3. `num1` 和 `num2` 均不以零开头，除非是数字 0 本身。
+4. **不能使用任何标准库的大数类型（比如 BigInteger）**或**直接将输入转换为整数来处**
+
+解答思路:该题是典型的用来处理大数的情况,在解答该题时,可以按照计算法则,将惩罚运算转为加法运算即可.比如计算`123 * 456`时,分别计算`123 * 4 = 492,123 * 5 = 615,123* 6 =738 `,按照计算最终结果是:`492 * 100+615*10+738 =56088 `.由于该种思路是我们思考乘法的常规思路,因此比较容易写出来,如图所示:
+
+![image-20181120104252533](https://ws1.sinaimg.cn/large/006tNbRwly1fxec63r8n5j30n20egweu.jpg)
+
+```java
+class Solution {
+    public String multiply(String num1, String num2) {
+        if ("0".equals(num1) || "0".equals(num2)) {
+            return "0";
+        }
+
+        String result = "";
+        // 将两个数的乘法操作转为加法操作.
+        for (int i = num2.length() - 1; i >= 0; i--) {
+            int times = num2.charAt(i) - '0';
+            String tmpResult = "";
+            for (int j = 0; j < times; j++) {
+                tmpResult = add(num1, tmpResult);
+            }
+            // 补0操作
+            for (int z = 0; z < num2.length() - i - 1; z++) {
+                tmpResult = tmpResult + "0";
+            }
+            result = add(tmpResult, result);
+        }
+        return result;
+    }
+    // 处理两个String的加法操作
+    private String add(String num1, String num2) {
+        if (num2.length() <= 0) {
+            return num1;
+        }
+        if (num1.length() < num2.length()) {
+            String tmp = num1;
+            num1 = num2;
+            num2 = tmp;
+        }
+        int index1 = num1.length() - 1;
+        int index2 = num2.length() - 1;
+        int carries = 0;
+        String result = "";
+        while (index2 >= 0) {
+            int sum = (num1.charAt(index1) - '0') + (num2.charAt(index2) - '0') + carries;
+            result = sum % 10 + result;
+            carries = sum / 10;
+            index2--;
+            index1--;
+        }
+        while (index1 >= 0) {
+            int sum = (num1.charAt(index1) - '0') + carries;
+            result = sum % 10 + result;
+            carries = sum / 10;
+            index1--;
+        }
+        if (carries > 0) {
+            result = carries + result;
+        }
+        return result;
+
+    }
+}
+```
+
+
+
+
+
+
+
+
+
+# 数组
 
 ##  比特与2比特字符
 
