@@ -899,6 +899,13 @@ volatile 主要有两方面的作用:
 ## poll()方法和remove()方法区别?
 poll()和 remove()都是从队列中取出一个元素,但是 poll() 在获取元素失败的时候会返回空,但是 remove() 失败的时候会抛出异常.
 
+## HashMap和HashTable的区别?
+
+- HashMap支持Key和Value为null的情况,而Hashtable不允许,因为HashMap对null进行了特殊处理,将null的hashCode值固定为0,从而将其存放在哈希表的第0个bucket.
+- HashMap非线程安全,Hashtable是线程安全.但可以通过`Collections.synchronziedMap(new HashMap())`获得线程安全的HashMap.
+- HashMap默认长度是16,扩容是原先的2倍;Hashtable默认长度是11,扩容是原先的2n+1
+- HashMap继承AbstractMap；Hashtable继承了Dictionary 
+
 ## LinkedHashMap和HashMap的区别?
 
 LinkedHashMap也是一个HashMap,通过维护一个额外的双向链表保证了迭代顺序,该迭代顺序可以是插入顺序,也可以是访问顺序.因此，根据链表中元素的顺序可以将LinkedHashMap分为:**保持插入顺序的LinkedHashMap** 和 **保持访问顺序的LinkedHashMap**,默认实现是按插入顺序排序的.

@@ -2,6 +2,31 @@
 
 ##  Activity&View系列
 
+### 简述Android的布局分类?
+
+早起Android官方提供以下五种布局:
+
+- LinearLayout
+- RelativeLayout
+- FrameLayout
+- GridLayout
+- TableLayout
+
+以上传统的布局,以LinearLayout和RelativeLayout最为常用,但是或多或少有些缺陷,比如RelativeLayout需要两次measure它的子View才能之道确切的大小;而LinearLayout布局的子View在使用layout_weight属性后,同样也需要两次measure过程.
+
+为此Android官方推出了两种新的布局:
+
+- ConstraintLayout: 约束布局,类似RelativeLayout,但更加灵活,再复杂的界面也可以只有2层
+- FlexboxLayout: 弹性布局,类似前端FlexBox,一种更高级的LinearLayout
+
+
+
+### 如何分析布局问题?
+
+判断布局是否有问题,可以借助Hierarchy Viewer工具,简称HV,该工作可以分析每个布局的measure,layout,draw三个过程的耗时.
+
+需要注意的是在Root设备或者Dev版的ROM上可以直接使用,而在没有Root的手机需要在PC端添加环境变量`ANDROID_HVPROTO=ddm`
+
 ### Android布局分类及绘制效率对比
 
 FrameLayout,LinearLayout,AbsoluteLayout,RelativeLayout,,TableLayout以及ConstraintLayout
@@ -49,6 +74,16 @@ Activity实例是由系统自动创建,并在不同的状态期间回调相应�
 - 对于`onDestory()`方法:系统销毁了这个Activity的实例在内存中占据的空间.在Activity的生命周期中,onDestory()方法是他生命的最后一步,资源空间等就被回收了.当重新进入此Activity的时候,必须重新创建,执行onCreate()方法
 
 简单来说就是:`finish()`方法用于结束一个Activity的生命周期,而`onDestory()`方法则是Activity的一个生命周期方法,其作用是在一个Activity对象被销毁之前,Android系统会调用该方法,用于释放此Activity之前所占用的资源.
+
+### 如何判断Activity是否已经被销毁?简写代码
+
+```java
+        if (activity == null || activity.isDestroyed() || activity.isFinishing()) {
+            return;
+        }
+```
+
+需要注意`isFinishing()`只有在主动调用`finish()`方法主动结束一个Activity时才会返回true.
 
 ### Activity销毁但Task如果没有销毁掉，当Activity重启时这个AsyncTask该如何解决？
 
@@ -438,9 +473,15 @@ ContentProvider以某种Uri的形式对外提供数据,允许其他应用访问�
 
 ### ContentProvider如何支持多线程操作?
 
-除了ContentProvider的`onCreate()`运行在UI线程,其他操作都运行在子线程中.
+除了ContentProvider的`onCreate()`运行在UI线程,其他操作都运行在子线程(Binder线程池)中.
 
-### ContentProvider和SQL的联系与区别?
+### 多个进程同时调用一个ContentProvider,ContentProvider如何反应?
+
+一个ContentProvider可以同时接受来自其他多个进程的请求操作,但具体的细节对开发者隐藏.需要知道的是ContentProvider所提供的`query()`,`insert()`,`delete()`,`update()`操作都运行在ContentProvider所在进行的Binder线程池中.
+
+### ContentProvider和SQL的联系与区别?或者说ContentProvider的设计原理?
+
+ContentProvider存在的首要目的是隐藏数据的实现方式,对外提供统一的数据访问接口.其次,能够更好的对数据访问权限进行管理,可以为不同的URI提供不同的权限设定,只有通过授权的URI才能真正进行数据访问操作.然后,ContentProvider封装跨进程数据共享的逻辑,对开发者而言只需要关注如何URI,而其具体的创建,生命周期以及线程管理则交给系统,能够有效的减少开发难度.
 
 ### ContextProvider启动时机?
 
@@ -775,6 +816,11 @@ while((ref=(Person)rq.poll())!=null){
 }
     
 ```
+### Android方法数不能超过65535的原因?
+Dalvik虚拟机并不直接执行Java源代码编译后生成的字节码文件,而是执行dex文件.在生成apk时,所有的的字节码文件会通过dx工具被合并到一个dex文件中.在早期Dalvik的设计过程中,调用方法的`invokde-kind`指令中,用于表示方法索引的method reference index采用16位来表示,即最多支持65535个方法.因此,在生成dex文件的过程,如果方法数超过65535就会报错.可以说这是个bug,类似的错误还存在于field和class的index中,但一般来说由于method数据会远多于field和class数目,因此大多数情况下我们会首先遇到method产生的65535问题.
+### 如果果一个项目中有10W个方法,需要打几个dex?
+MultiDex是Google官方用来解决单个Dex中方法数不能超过65535限制的方案.当启用MultiDex后,如果项目超过65535个方法,编译后的项目会包含多个dex文件.
+比如一个包含10w个方法的app打包后应该有两个dex文件:第一个dex中方法数达到上限,另一个为100000-65535=34465.
 
 
 

@@ -947,6 +947,10 @@ private static Class defineClass(String name, ClassLoader loader, Object cookie,
 BaseDexClassLoader#findClass -> DexPathList#findClass -> Element#findClass -> DexFile#loadClassBinaryName -> DexFile#defineClass -> DexFile#defineClassNative
 ```
 
+## 简述MultiDex原理
+
+MultiDex仍然是基于DexClassLoader实现的多Dex加载机制.应用在启动后会检查系统版本是否支持MultiDex,检查是否有其他dex需要被安装.如果需要被安装,就会从应用apk中解压出对应的dex,比如classes2.dex,classes3.dex等,并将其拷贝到`/data/data//code_cache/secondary-dexes/`中,然后通过反射的方式将该dex注入到PathClassLoader中的pathList中.
+
 # Android数据结构与设计
 
 ### SparseArray实现原理?
@@ -1205,6 +1209,10 @@ layout/about.xml
 ### Glide加载长图与图片背景色
 
 ## 响应式框架
+
+## 简述对RxJava框架的理解
+
+
 
 ## 注解框架
 
