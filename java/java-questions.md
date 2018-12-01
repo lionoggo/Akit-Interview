@@ -122,7 +122,7 @@ public class Object {
 
 
 
-##Object中的`equals()`和`hashcode()`的联系
+## Object中的`equals()`和`hashcode()`的联系
 
 `hashCode()`是Object类的一个方法,返回一个哈希值.如果两个对象根据equal()方法比较相等,那么调用这两个对象中任意一个对象的hashCode()方法必须产生相同的哈希值;如果两个对象根据eqaul()方法比较不相等,那么产生的哈希值不一定相等(碰撞的情况下还是会相等的.)
 
@@ -225,7 +225,7 @@ public class Test{
 
 ## final有哪些用法?
 
-final也是很多面试喜欢问的地方,但我觉得这个问题很无聊,通常能回答下以下三点就不错了:
+final也是很多面试喜欢问的地方,但我觉得这个问题很无聊,通常能回答下以下5点就不错了:
 
 - 被final修饰的类不可以被继承
 - 被final修饰的方法不可以被重写
@@ -385,14 +385,14 @@ s1 += 1;
 
 有时候希望传入的类型有一个指定的范围，从而可以进行一些特定的操作,这时候就需要通配符了?在Java中常见的通配符主要有以下几种:
 
-- <?>: 无限制通配符
-- <? extends E>: extends 关键字声明了类型的上界,表示参数化的类型可能是所指定的类型,或者是此类型的子类
-- <? super E>: super关键字声明了类型的下界,表示参数化的类型可能是指定的类型,或者是此类型的父类
+- `<?>`: 无限制通配符
+- `<? extends E>`: extends 关键字声明了类型的上界,表示参数化的类型可能是所指定的类型,或者是此类型的子类
+- `<? super E>`: super关键字声明了类型的下界,表示参数化的类型可能是指定的类型,或者是此类型的父类
 
 它们的目的都是为了使方法接口更为灵活,可以接受更为广泛的类型.
 
-- < ? extends E>: 用于灵活**读取**，使得方法可以读取 E 或 E 的任意子类型的容器对象。
-- < ? super E>: 用于灵活**写入或比较**,使得对象可以写入父类型的容器,使得父类型的比较方法可以应用于子类对象。
+- `< ? extends E>`: 用于灵活**读取**，使得方法可以读取 E 或 E 的任意子类型的容器对象。
+- `< ? super E>`: 用于灵活**写入或比较**,使得对象可以写入父类型的容器,使得父类型的比较方法可以应用于子类对象。
 
 用简单的一句话来概括就是为了获得最大限度的灵活性,要在表示生产者或者消费者的输入参数上使用通配符,使用的规则就是:生产者有上限(读操作使用extends),消费者有下限(写操作使用super).
 
@@ -435,7 +435,7 @@ JVM中垃圾回收机制最基本的做法是分代回收.内存中的区域被�
  4. 分代回收
  更详细的内容参见[深入理解垃圾回收算法](http://blog.csdn.net/dd864140130/article/details/50084471)
 
-##如何判断一个对象是否应该被回收?
+## 如何判断一个对象是否应该被回收?
 
 这就是所谓的对象存活性判断,常用的方法有两种:
 
@@ -591,7 +591,7 @@ synchronized是和if、else、for、while一样的关键字，ReentrantLock是�
 ## Java当中有哪几种锁
 1. 自旋锁: 自旋锁在JDK1.6之后就默认开启了。基于之前的观察，共享数据的锁定状态只会持续很短的时间，为了这一小段时间而去挂起和恢复线程有点浪费，所以这里就做了一个处理，让后面请求锁的那个线程在稍等一会，但是不放弃处理器的执行时间，看看持有锁的线程能否快速释放。为了让线程等待，所以需要让线程执行一个忙循环也就是自旋操作。在jdk6之后，引入了自适应的自旋锁，也就是等待的时间不再固定了，而是由上一次在同一个锁上的自旋时间及锁的拥有者状态来决定
 
-2. 偏向锁: 在JDK1.之后引入的一项锁优化，目的是消除数据在无竞争情况下的同步原语。进一步提升程序的运行性能。 偏向锁就是偏心的偏，意思是这个锁会偏向第一个获得他的线程，如果接下来的执行过程中，改锁没有被其他线程获取，则持有偏向锁的线程将永远不需要再进行同步。偏向锁可以提高带有同步但无竞争的程序性能，也就是说他并不一定总是对程序运行有利，如果程序中大多数的锁都是被多个不同的线程访问，那偏向模式就是多余的，在具体问题具体分析的前提下，可以考虑是否使用偏向锁。
+2. 偏向锁: 在JDK1.6之后引入的一项锁优化，目的是消除数据在无竞争情况下的同步原语。进一步提升程序的运行性能。 偏向锁就是偏心的偏，意思是这个锁会偏向第一个获得他的线程，如果接下来的执行过程中，改锁没有被其他线程获取，则持有偏向锁的线程将永远不需要再进行同步。偏向锁可以提高带有同步但无竞争的程序性能，也就是说他并不一定总是对程序运行有利，如果程序中大多数的锁都是被多个不同的线程访问，那偏向模式就是多余的，在具体问题具体分析的前提下，可以考虑是否使用偏向锁。
 
 3. 轻量级锁: 为了减少获得锁和释放锁所带来的性能消耗，引入了“偏向锁”和“轻量级锁”，所以在Java SE1.6里锁一共有四种状态，无锁状态，偏向锁状态，轻量级锁状态和重量级锁状态，它会随着竞争情况逐渐升级。锁可以升级但不能降级，意味着偏向锁升级成轻量级锁后不能降级成偏向锁
 
@@ -757,7 +757,7 @@ ConcurrentHashMap内部有一个Segment<K,V>数组,该Segment对象可以充当�
 ![image-20181023220331387](https://i.imgur.com/pQ0DGDQ.png)
 
 ### jdk 1.8
-在jdk 8中,ConcurrentHashMap不再使用Segment分段锁,而是采用一种CAS算法来实现同步问题,但其底层还是"数组+链表->红黑树"的实现,和HashMap一样.synchronized只锁定当前链表或红黑二叉树的首节点,这样只要hash不冲突,就不会产生并发,效率又提升N倍,简单来看一下其put的过程:
+在jdk 8中,ConcurrentHashMap不再使用Segment分段锁,而是采用一种CAS算法来实现同步问题,但其底层还是"数组+链表->红黑树"的实现,和HashMap一样.在没有发生Hash冲突的情况下,通过CAS进行更新,否则通过synchronized锁定当前链表或红黑二叉树的首节点,这样只要hash不冲突,就不会产生并发,效率又提升N倍,简单来看一下其put的过程:
 
 ```java
     final V putVal(K key, V value, boolean onlyIfAbsent) {
@@ -843,7 +843,7 @@ ConcurrentHashMap内部有一个Segment<K,V>数组,该Segment对象可以充当�
     }
 ```
 
-总结一下,JDK8中的实现也是锁分离的思想,它把锁分的比segment(JDK1.5)更细一些.只要hash不冲突,就不会出现并发获得锁的情况.它首先使用无锁操作CAS插入头结点,如果插入失败,说明已经有别的线程插入头结点了,再次循环进行操作.如果头结点已经存在,则通过synchronized获得头结点锁,进行后续的操作.
+总结一下,JDK8中的实现也是锁分离的思想,它把锁分的比segment(JDK1.6)更细一些.只要hash不冲突,就不会出现并发获得锁的情况.它首先使用无锁操作CAS插入头结点,如果插入失败,说明已经有别的线程插入头结点了,再次循环进行操作.如果头结点已经存在,则通过synchronized获得头结点锁,进行后续的操作.
 
 ## CyclicBarrier和CountDownLatch区别?
 
@@ -872,7 +872,7 @@ ConcurrentHashMap内部有一个Segment<K,V>数组,该Segment对象可以充当�
 Java中可以创建volatile类型数组,不过只是一个指向数组的引用,而不是整个数组.如果改变引用指向的数组,将会受到volatile 的保护,但是如果多个线程同时改变数组的元素,volatile标示符就不能起到之前的保护作用了.
 
 ## volatile能使得一个非原子操作变成原子操作吗?
-一个典型的例子是在类中有一个 long类型的成员变量.如果你知道该成员变量会被多个线程访问,最好是将其设置为 volatile.为什么?因为 Java中读取long 类型变量不是原子的,需要分成两步,如果一个线程正在修改该 long 变量的值,另一个线程可能只能看到该值的一半.但是对一个volatile型的long或double 变量的读写是原子.
+一个典型的例子是在类中有一个 long类型的成员变量.如果你知道该成员变量会被多个线程访问,最好是将其设置为 volatile.为什么?因为 Java中读取long类型变量不是原子的,需要分成两步,如果一个线程正在修改该 long变量的值,另一个线程可能只能看到该值的一半.
 
 一种实践是用volatile修饰long和double变量,使其能按原子类型来读写.double和long都是64位宽,JVM对这两种类型的读是分为两部分的:第一次读取第一个 32 位，然后再读剩下的 32 位,这个过程不是原子的.但 Java中volatile型的long或double 变量的读写是原子的.
 
@@ -885,7 +885,7 @@ volatile 主要有两方面的作用:
 
 - 可见性保证
 
-  例如JVM 或者JIT为了获得更好的性能会对语句重排序,但是volatile 类型变量即使在没有同步块的情况下赋值也不会与其他语句重排序.volatile提供 happens-before 的保证,确保一个线程的修改能对其他线程是可见的.某些情况下,volatile 还能提供原子性,如读 64 位数据类型,像 long和double都不是原子的(低32位和高32位),但volatile 类型的double和long 就是原子的.
+例如JVM 或者JIT为了获得更好的性能会对语句重排序,但是volatile 类型变量即使在没有同步块的情况下赋值也不会与其他语句重排序.volatile提供 happens-before 的保证,确保一个线程的修改能对其他线程是可见的.某些情况下,volatile 还能提供原子性,如读 64 位数据类型,像 long和double都不是原子的(低32位和高32位),但volatile 类型的double和long 就是原子的.
 
 ----------
 #关于集合
@@ -901,7 +901,7 @@ poll()和 remove()都是从队列中取出一个元素,但是 poll() 在获取�
 
 ## HashMap和HashTable的区别?
 
-- HashMap支持Key和Value为null的情况,而Hashtable不允许,因为HashMap对null进行了特殊处理,将null的hashCode值固定为0,从而将其存放在哈希表的第0个bucket.
+- HashMap支持Key和Value为null的情况,而Hashtable不允许,因为HashMap对null进行了特殊处理,将null的hashCode值固定为0,从而将其存放在哈希数组下标为0的位置.
 - HashMap非线程安全,Hashtable是线程安全.但可以通过`Collections.synchronziedMap(new HashMap())`获得线程安全的HashMap.
 - HashMap默认长度是16,扩容是原先的2倍;Hashtable默认长度是11,扩容是原先的2n+1
 - HashMap继承AbstractMap；Hashtable继承了Dictionary 
@@ -917,44 +917,8 @@ PriorityQueue是一个优先级队列.保证最高或者最低优先级的的元
 ## WeakHashMap与HashMap的区别是什么?
 WeakHashMap的工作与正常的 HashMap 类似.但是使用弱引用作为 key,意思就是当key对象没有任何引用时,key/value 将会被回收.
 
-## ArrayList和LinkedList的区别?
-最明显的区别是 ArrrayList底层的数据结构是数组,支持随机访问,而 LinkedList 的底层数据结构是**双向循环链表**，不支持随机访问.使用下标访问一个元素，ArrayList 的时间复杂度是 O(1),而 LinkedList 是O(n).
-
-## ArrayList和Array有什么区别?
-
-  1. Array可以容纳基本类型和对象而,ArrayList只能容纳对象。
-  2. Array是固定大小的，而ArrayList是可以动态扩容的.
-
-## ArrayList和HashMap默认大小?
-
-在 JDK 7中,ArrayList 的默认大小是 10 个元素,HashMap 的默认大小是16个元素(必须是2的幂),这就是 Java 7 中 ArrayList 和 HashMap 类的代码片段
-```java
-// from ArrayList.java JDK 7
-private static final int DEFAULT_CAPACITY = 10;
- 
- //from HashMap.java JDK 7
- static final int DEFAULT_INITIAL_CAPACITY = 1 << 4; // aka 16
-```
-
-## Comparator和Comparable的区别?
-
-Comparable接口用于定义对象的自然顺序,而 comparator 通常用于定义用户定制的顺序.Comparable 总是只有一个,但是可以有多个 comparator 来定义对象的顺序.
-
-## 如何实现集合排序?
-你=可以使用有序集合,如TreeSet 或TreeMap,也可以使用有顺序的的集合,如 list,然后通过Collections.sort() 来排序.
-
-## 如何打印数组内容?
-
-你可以使用 Arrays.toString() 和 Arrays.deepToString() 方法来打印数组.由于数组没有实现 toString() 方法,所以如果将数组传递给 System.out.println() 方法,将无法打印出数组的内容，但是 Arrays.toString() 可以打印每个元素.
-
-## LinkedList的是单向链表还是双向?
-双向循环列表,具体实现自行查阅源码.
-
 ## TreeMap是实现原理
 采用红黑树实现,具体实现自行查阅源码.
-
-## 遍历ArrayList时如何正确移除一个元素
-该问题的关键在于面试者使用的是 ArrayList的 remove() 还是 Iterator 的 remove()方法。
 
 
 ## 什么是ArrayMap?它和HashMap有什么区别?
@@ -969,7 +933,101 @@ HashMap是基于哈希表的Map接口的非同步实现,此实现提供所有可
 
 当我们往HashMap中put元素时,首先根据key的hashcode重新计算hash值,根据hash值得到这个元素在数组中的位置(下标),如果该数组在该位置上已经存放了其他元素,那么在这个位置上的元素将以链表的形式存放,新加入的放在链头,最先加入的放入链尾.如果数组中该位置没有元素,就直接将该元素放到数组的该位置上..
 
-需要注意Jdk 1.8中对HashMap的实现做了优化,当链表中的节点数据超过八个之后,该链表会转为红黑树来提高查询效率,从原来的O(n)到O(logn)
+需要注意Jdk 1.8中对HashMap的实现做了优化,当链表中的节点数据超过8个之后,该链表会转为红黑树来提高查询效率,从原来的O(n)到O(logn).当树的节点数小于6个后会再转为链表结构.在`get()`操作时,通过对Hash值进行取模操作来计算哈希数组的下标,此时取到的元素类型是Node的话,则按链表的方式进行查找,如果是TreeNode的话,则按红黑树的方式查找.在进行`put()`操作时,如果哈希数组为空,则首先通过扩容的方式对其进行初始化,然后计算其要存放的位置.如果要插入的键值已经存在,则用新值替换旧值;否则,将其插入链表中,并根据链表的大小决定是否要转为红黑树.插入完成后,判断当前元素数量是否达到阀值,到达之后进行扩容操作.
+
+## 简述HashMap在创建时是如何设置哈希数组的大小的?
+
+HashMap在初始化时允许我们指定负载因子和初始化容量大小,以JDK 1.8为例,其最终调用构造方法如下:
+
+```java
+    public HashMap(int initialCapacity, float loadFactor) {
+		......
+        this.loadFactor = loadFactor;
+        this.threshold = tableSizeFor(initialCapacity);
+    }
+```
+
+默认情况下负载因子loadFactory为`DEFAULT_LOAD_FACTOR = 0.75f`,初始化容量initialCapacity为` DEFAULT_INITIAL_CAPACITY = 1 << 4`即16.其中HashMap要求哈希数组的大小必须2<sup>n</sup>,如果我们在初始时指定initialCapacity为7会是如何?其处理逻辑在`tableSizeFor()`中:
+
+```java
+    static final int tableSizeFor(int cap) {
+        int n = cap - 1;
+        n |= n >>> 1;
+        n |= n >>> 2;
+        n |= n >>> 4;
+        n |= n >>> 8;
+        n |= n >>> 16;
+        return (n < 0) ? 1 : (n >= MAXIMUM_CAPACITY) ? MAXIMUM_CAPACITY : n + 1;
+    }
+```
+
+该方法能返回大于输入参数且离该参数最近的2<sup>n</sup>的整数,比如如果如输入10,则返回16;如果输入7则返回8.
+
+## 简述HashMap中哈希值计算方法?
+
+以JDK 1.8源码为例,对于key为null的情况,其hash值固定为0,否则进行以下两步:
+
+- 获取key对应的hashCode
+- hashCode高位参与运算
+
+```java
+    static final int hash(Object key) {
+        int h;
+        return (key == null) ? 0 : (h = key.hashCode()) ^ (h >>> 16);
+    }
+```
+
+和JDK 1.7之前不同,在JDK 1.8中优化了高位运算算法,即让hashCode()的高16位与低16位进行异或运算:`(h = k.hashCode()) ^ (h >>> 16)`,这样做的好处是当哈希数组比较小的情况,也能保证高位参与到hash值的计算过程:
+
+![image-20181201145328121](https://i.imgur.com/Pg6VtbT.png)
+
+在上图中,n代表哈希数组的长度,此时其大小为16.
+
+## 简述HashMap中通过哈希值定位哈希数组位置的过程?
+
+在计算出Hash值之后,需要通过它确定Key在哈希数组中的下标,常用的方式取模.以JDK 1.8红的HashTable为例,其计算过程如下:
+
+```java
+    public synchronized V put(K key, V value) {
+        // Make sure the value is not null
+        if (value == null) {
+            throw new NullPointerException();
+        }
+		......
+        // 计算hash    
+        int hash = key.hashCode();
+        // 通过取模运算计算index,这里通过hash & 0x7FFFFFFF是将符号位强制为0,
+        // 以保证计算出的都是正整数
+        int index = (hash & 0x7FFFFFFF) % tab.length;
+  		......
+    }
+```
+
+`0x7FFFFFFF` 是`0111 1111 1111 1111 1111 1111 1111 1111`,即除符号位外的所有1.将其与hash进行或操作,可以保证产生都是正整数,这样不至于出现类似`-1 & 10 = -1`的情况.
+
+在HashMap中通常是对Hash值进行取模操作,但是和HashTable不同,HashMap在取模和扩容时做了优化.HashMap在创建或扩容时保证其哈希桶的大小始终是2<sup>n</sup>,此时可以用`h & (length -1)`运算等价于`(hash & 0x7FFFFFFF) % length`,以JDK 1.8 HashMap的代码为例:
+
+```java
+    final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
+                   boolean evict) {
+        Node<K,V>[] tab; Node<K,V> p; int n, i;
+        if ((tab = table) == null || (n = tab.length) == 0)
+            n = (tab = resize()).length;
+        // i= (n - 1) & hash即计算哈希数组下标的过程
+        if ((p = tab[i = (n - 1) & hash]) == null)
+        ......    
+    }
+```
+
+## 简单说说 JDK1.7 中 HashMap 什么情况下会发生扩容？如何扩容？
+
+HashMap 中默认的负载因子为 0.75,默认情况下第一次扩容阀值是 12(16 * 0.75),故第一次存储第13个键值对时就会触发扩容机制变为原来数组长度的2倍,以后每次扩容都类似计算机制.
+
+![image-20181024125053256](https://i.imgur.com/jDiNG6m.png)
+
+JDK 1,8在1.7的基础上做了优化,不需要像JDK1.7的实现那样在扩容后重新计算hash,只需要看看原来的hash值新增的那个bit是1还是0就好了:是0的话索引没变,是1的话索引变成"原索引+oldCap",即扩容之前的索引值+扩容之前的容量.比如起始时,容量为16,元素计算后的索引值index为5,那么容量在由16扩容到32之后,其index= 5+16,即21,如下所示:
+
+![image-20181024130306810](https://i.imgur.com/RCaliUr.png)
 
 ## LinkedHashMap的实现原理?
 
@@ -1004,6 +1062,27 @@ class LRUCache<K,V> extends LinkedHashMap<K,V>{
 	}  
 }
 ```
+
+## ArrayList和LinkedList的区别?
+
+最明显的区别是 ArrayList底层的数据结构是数组,支持随机访问,而 LinkedList 的底层数据结构是**双向循环链表**，不支持随机访问.访问一个元素时，ArrayList 的时间复杂度是 O(1),而 LinkedList 是O(n).
+
+## ArrayList和Array有什么区别?
+
+1. Array可以容纳基本类型和对象而,ArrayList只能容纳对象。
+2. Array是固定大小的，而ArrayList是可以动态扩容的.
+
+## 了解CopyOnWriteArrayList么?
+
+如果你还记得Linux中进程fork时的Copy-On-Write机制,那此时一定很轻松理解此类的设计.Copy-On-Write是一种用于程序设计中的优化策略.其基本思路是:一开始大家都在共享同一个内容,当某个人想要修改这个内容的时候,才会真正把内容Copy出去形成一个新的内容然后再改.从JDK1.5开始Java并发包里提供了两个使用CopyOnWrite机制实现的并发容器:CopyOnWriteArrayList和CopyOnWriteArraySet.
+
+## 遍历ArrayList时如何正确移除一个元素
+
+该问题的关键在于面试者使用的是 ArrayList的 remove() 还是 Iterator 的 remove()方法。
+
+## LinkedList的是单向链表还是双向?
+
+双向循环列表,具体实现自行查阅源码.
 
 ## ArrayList扩容算法?
 
@@ -1062,17 +1141,29 @@ private void grow(int minCapacity) {
 
 默认情况下,capacityIncrement为0,此时newCapacity=oldCapacity+oldCapacity,即容量扩增为原来的2倍.如果已经设置了capacityIncrement,此时newCapacity=oldCapacity+capacityIncrement.
 
-## 简单说说 JDK1.7 中 HashMap 什么情况下会发生扩容？如何扩容？
+## ArrayList和HashMap默认大小?
 
-HashMap 中默认的负载因子为 0.75,默认情况下第一次扩容阀值是 12(16 * 0.75),故第一次存储第13个键值对时就会触发扩容机制变为原来数组长度的2倍,以后每次扩容都类似计算机制.
+在 JDK 7中,ArrayList 的默认大小是 10 个元素,HashMap 的默认大小是16个元素(必须是2的幂),这就是 Java 7 中 ArrayList 和 HashMap 类的代码片段
 
-![image-20181024125053256](https://i.imgur.com/jDiNG6m.png)
+```java
+// from ArrayList.java JDK 7
+private static final int DEFAULT_CAPACITY = 10;
+ 
+ //from HashMap.java JDK 7
+ static final int DEFAULT_INITIAL_CAPACITY = 1 << 4; // aka 16
+```
 
-JDK 1,8在1.7的基础上做了优化,不需要像JDK1.7的实现那样在扩容后重新计算hash,只需要看看原来的hash值新增的那个bit是1还是0就好了:是0的话索引没变,是1的话索引变成"原索引+oldCap",即扩容之前的索引值+扩容之前的容量.比如起始时,容量为16,元素计算后的索引值index为5,那么容量在由16扩容到32之后,其index= 5+16,即21,如下所示:
+## Comparator和Comparable的区别?
 
-![image-20181024130306810](https://i.imgur.com/RCaliUr.png)
+Comparable接口用于定义对象的自然顺序,而 comparator 通常用于定义用户定制的顺序.Comparable 总是只有一个,但是可以有多个 comparator 来定义对象的顺序.
 
+## 如何实现集合排序?
 
+你=可以使用有序集合,如TreeSet 或TreeMap,也可以使用有顺序的的集合,如 list,然后通过Collections.sort() 来排序.
+
+## 如何打印数组内容?
+
+你可以使用 Arrays.toString() 和 Arrays.deepToString() 方法来打印数组.由于数组没有实现 toString() 方法,所以如果将数组传递给 System.out.println() 方法,将无法打印出数组的内容，但是 Arrays.toString() 可以打印每个元素.
 
 ## 你了解Fail-Fast机制吗
 
@@ -1103,8 +1194,6 @@ Iterator的fail-fast属性与当前的集合共同起作用,因此它不会受�
 
   DelayQueue对元素进行持有直到一个特定的延迟到期.注入其中的元素必须实现 java.util.concurrent.Delayed 接口.
 
-
-
 ## 阻塞队列常用方法
 
 BlockingQueue具有4组不同的方法用于插入,移除以及对队列中的元素进行检查,如果请求的操作不能得到立即执行的话，每个方法的表现也不同,具体如下:
@@ -1118,23 +1207,19 @@ BlockingQueue具有4组不同的方法用于插入,移除以及对队列中的�
 
 需要注意我们无法向一个BlockingQueue 中插 null.如果你试图插入null,BlockingQueue将会抛出一个 NullPointerException.
 
+## 知道BlockingDeque?
+
+BlockingDeque是双端阻塞队列,和BlockingQueue是类似的,只不过BlockingDeque提供从任意一端插入或者获取元素的功能.
+
 ## 阻塞队列的原理是什么?
 
 阻塞队列实现阻塞同步的方式很简单,使用的就是是lock锁的多条件(condition)阻塞控制.使用BlockingQueue封装了根据条件阻塞线程的过程.
-
-## 知道**BlockingDeque**?
-
-BlockingDeque是双端阻塞队列,和BlockingQueue是类似的,只不过BlockingDeque提供从任意一端插入或者获取元素的功能.
 
 ## 非阻塞队列是什么?原理呢?
 
 有时候需要使用线程安全的队列.实现一个线程安全的队列有两种方式:一种是使用阻塞算法,另一种是使用非阻塞算法.使用阻塞算法实现的队列成为阻塞队列,其内部可以用一个锁(入队和出队用同一把锁)或两个锁(入队和出队用不同的锁)等方式来实现.非阻塞的实现方式则可以使用循环CAS的方式来实现.
 
 ConcurrentLinkedQueue是一个基于链接节点的无界线程安全队列,它采用先进先出的规则对节点进行排序,当我们添加一个元素的时候,它会添加到队列的尾部,当我们获取一个元素时,它会返回队列头部的元素,它采用了“wait－free”算法来实现,[非阻塞原理底层实现](https://my.oschina.net/u/2988360/blog/956533)
-
-## 了解CopyOnWriteArrayList么?
-
-如果你还记得Linux中进程fork时的Copy-On-Write机制,那此时一定很轻松理解此类的设计.Copy-On-Write是一种用于程序设计中的优化策略.其基本思路是:一开始大家都在共享同一个内容,当某个人想要修改这个内容的时候,才会真正把内容Copy出去形成一个新的内容然后再改.从JDK1.5开始Java并发包里提供了两个使用CopyOnWrite机制实现的并发容器:CopyOnWriteArrayList和CopyOnWriteArraySet.
 
 # 关于日期
 
@@ -1158,14 +1243,11 @@ Java中,可以使用SimpleDateFormat 类或者joda-time库来格式日期.DateFo
 throw用于主动抛出java.lang.Throwable类的一个实例化对象,意思是说你可以通过关键字 throw抛出一个 Error 或者 一个Exception,如：`throw new IllegalArgumentException(“size must be multiple of 2″)`,
 而throws 的作用是作为方法声明和签名的一部分,方法被抛出相应的异常以便调用者能处理.Java 中,任何未处理的受检查异常强制在 throws 子句中声明.
 
-
-
 # 关于序列化
 
-## Java 中，Serializable 与 Externalizable 的区别
+## Java 中Serializable 与 Externalizable 的区别
+
 Serializable 接口是一个序列化Java 类的接口,以便于它们可以在网络上传输或者可以将它们的状态保存在磁盘上,是 JVM 内嵌的默认序列化方式,成本高,脆弱而且不安全.Externalizable 允许你控制整个序列化过程,指定特定的二进制格式,增加安全机制.
-
-
 
 ## 反射与注解
 
@@ -1201,9 +1283,8 @@ DOM,SAX,PULL三种解析方式:
  - SAX:解析效率高，占用内存少，基于事件驱动的：更加简单地说就是对文档进行顺序扫描，当扫描到文档(document)开始与结束、元素(element)开始与结束、文档(document)结束等地方时通知事件处理函数，由事件处理函数做相应动作，然后继续同样的扫描，直至文档结束。
  - PULL:与 SAX 类似，也是基于事件驱动，我们可以调用它的next（）方法，来获取下一个解析事件（就是开始文档，结束文档，开始标签，结束标签），当处于某个元素时可以调用XmlPullParser的getAttributte()方法来获取属性的值，也可调用它的nextText()获取本节点的值。
 
-
-
 ## JDK 1.7特性
+
 然 JDK 1.7 不像 JDK 5 和 8 一样的大版本，但是，还是有很多新的特性，如 try-with-resource 语句，这样你在使用流或者资源的时候，就不需要手动关闭，Java 会自动关闭。Fork-Join 池某种程度上实现 Java 版的 Map-reduce。允许 Switch 中有 String 变量和文本。菱形操作符(\<\>)用于类型推断，不再需要在变量声明的右边申明泛型，因此可以写出可读写更强、更简洁的代码
 ## JDK 1.8特性
 java 8 在 Java 历史上是一个开创新的版本，下面 JDK 8 中 5 个主要的特性：
