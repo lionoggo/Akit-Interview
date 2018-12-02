@@ -744,7 +744,7 @@ measure()方法,layout(),draw()三个方法主要存放了一些标识符,来判
 
 所谓打包就是将工程变为apk的过程.对于Android APK而言,主要由两部分构成:代码文件和资源文件.因此Android的项目的打包过程也就基本分为对两类资源的处理过程.使用V1签名和V2的签名的的打包流程稍有不同,我们以V1签名为例来简述打包流程:
 
-![image-20180807113012986](http://pbj0kpudr.bkt.clouddn.com/blog/2018-08-07-033013.png)
+![image-20180807113012986](https://i.imgur.com/BjapIH3.png)
 
 1. 通过AAPT(Android Studio3.0后默认使用AAPT2)工具进行资源(AndroidMainifest.xml,各种xml资源等)处理,该过程生成我们常见的R.java和被处理过测资源文件
 2. 通过aidl工具处理aidl文件,生成相应的java文件
@@ -754,11 +754,9 @@ measure()方法,layout(),draw()三个方法主要存放了一些标识符,来判
 6. 使用Jarsigner工具对该APK进行
 7. 使用zipalign对签名过的APK文件进行对齐操作
 
-
-
 Android 7.0后新增了V2签名,其签名由apksigner工具完成,其大概流程非常类似上述:
 
-![image-20180807113823444](http://pbj0kpudr.bkt.clouddn.com/blog/2018-08-07-033823.png)
+![image-20180807113823444](https://i.imgur.com/YCcZbi0.png)
 
 由于V2签名机制改变,apk的对齐被移到签名之前.即现在是先进行对齐操作然后才会使用apksigner进行签名.
 
@@ -766,7 +764,7 @@ Android 7.0后新增了V2签名,其签名由apksigner工具完成,其大概流�
 
 Android中的虚拟机读取Dex文件,Dex本质就是对Class文件进一步压缩调整,优化,最终为每个API生成class.dex(没有开启多Dex前提下).目前Android主要有以下几种加载器:
 
-![image-20180806152446643](http://pbj0kpudr.bkt.clouddn.com/blog/2018-08-06-072446.png)
+![image-20180806152446643](https://i.imgur.com/UWh1Uoi.png)
 
 其中我们常见的是:DexClassLoader和PathClassLoader.两者都是BaseDexClassLoader的子类.区别在于调用父类构造器时,DexClassLoader会传入optimizedDirectory参数.该参数指定的路径(该路径通常为应用的应用的私有目录,以避免注入攻击)用来缓存Dex优化后的文件.
 
@@ -949,7 +947,7 @@ BaseDexClassLoader#findClass -> DexPathList#findClass -> Element#findClass -> De
 
 ## 简述MultiDex原理
 
-MultiDex仍然是基于DexClassLoader实现的多Dex加载机制.应用在启动后会检查系统版本是否支持MultiDex,检查是否有其他dex需要被安装.如果需要被安装,就会从应用apk中解压出对应的dex,比如classes2.dex,classes3.dex等,并将其拷贝到`/data/data//code_cache/secondary-dexes/`中,然后通过反射的方式将该dex注入到PathClassLoader中的pathList中.
+MultiDex仍然是基于DexClassLoader实现的多Dex加载机制.应用在启动后会检查系统版本是否支持MultiDex,检查是否有其他dex需要被安装.如果需要被安装,就会从应用apk中解压出对应的dex,比如classes2.dex,classes3.dex等,并将其拷贝到`/data/data/code_cache/secondary-dexes/`中,然后通过反射的方式将该dex注入到PathClassLoader中的pathList中.
 
 # Android数据结构与设计
 
@@ -1122,7 +1120,7 @@ layout/about.xml
 
 ### OkHttp特点是什么?简述其基本架构?
 
-### OKHttp任务执行方式及设计?
+### OkHttp任务执行方式及设计?
 
 ### OkHttp两种拦截器的区别?
 
