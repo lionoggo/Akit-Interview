@@ -1,4 +1,4 @@
-# 系统原理
+# Android系统原理
 
 ## Android进程分类及变化?
 
@@ -1120,13 +1120,107 @@ layout/about.xml
 
 ### OkHttp特点是什么?简述其基本架构?
 
+OKHttp是一款高效的HTTP客户端,支持连接同一地址的链接共享同一个socket,能够通过连接池来减小响应延迟,此外还支持透明的GZIP压缩,请求缓存等,其核心涉及路由,连接协议,拦截器,代理,安全性认证,连接池以及网络适配.其中拦截器主要是用于添加,移除或者转换请求或者回应的头部信息
+
+OkHttp整体架构比较简单,但细节处理非常之多.了解OKHttp过程,要从整体把握脉络,借用一张图来简述:
+
+![image-20181202153201028](https://i.imgur.com/VxEiIHy.png)
+
 ### OkHttp任务执行方式及设计?
+
+OkHttp支持两种任务执行方式:同步和异步,分别由Dispatcher的`execute()`和`enqueue()`来实现,此外Dispatcher引入了三个任务队列用于实现对任务的管理和存储:
+
+```java
+public final class Dispatcher {
+  // 就绪队列
+  private final Deque<AsyncCall> readyAsyncCalls = new ArrayDeque<>();
+  // 运行队列(异步)
+  private final Deque<AsyncCall> runningAsyncCalls = new ArrayDeque<>();
+  // 运行队列(同步)	
+  private final Deque<RealCall> runningSyncCalls = new ArrayDeque<>();
+}
+```
+
+所有的任务都会交给Dispatcher内部的线程池去处理,它被定义为一个核心线程数为0,最大线程数不限,线程超时时间为60s,并采用SynchronousQueue作为任务队列的线程池.
+
+```java
+public final class Dispatcher {
+	
+  private ExecutorService executorService;
+
+  public synchronized ExecutorService executorService() {
+    if (executorService == null) {
+      executorService = new ThreadPoolExecutor(0, Integer.MAX_VALUE, 60, TimeUnit.SECONDS,
+          new SynchronousQueue<Runnable>(), Util.threadFactory("OkHttp Dispatcher", false));
+    }
+    return executorService;
+  }
+}    
+```
 
 ### OkHttp两种拦截器的区别?
 
-### Retrofit的优点和缺点是什么?简述其基本架构?
+OkHttp中支持Application interceptors和Network Interceptors两种拦截器,两者最大的特点是工作时机不同:
+
+![image-20181202155208375](https://i.imgur.com/hzgnef9.png)
+
+对Application Interceptors而言:
+
+- 不需要担心中间过程的响应,如重定向和重试
+- 只会被调用一次,即使这个响应是从缓存中获取的
+- 只关注最原始的请求,不关心OkHttp注入的头信息如: *If-None-Match*
+- 可以中断调用过程,有权决定是否要执行`Chain.proceed()`
+- 允许重试,可以多次调用`Chain.proceed()`
+
+对Network Interceptors而言:
+
+- 能够操作中间过程的响应,如重定向和重试.
+- 当返回缓存时不被调用.
+- 观察在网络上传输的数据变化,比如重定向
+- 携带请求来访问连接
+
+### Retrofit的特点是什么?简述其基本架构?
+
+Retrofit是一套快速搭建网络请求的脚手架,底层依赖于OkHttp,其最大的特点是通过接口和注解能快速的实现网络请求接口.此外,Retrofit整个体系架构非常清晰和明确,可以说是设计模式优秀的示范:
+
+![Retrofit](https://i.imgur.com/vFqj8Ma.png)
 
 ### Retrofit如何实现动态代理的?
+
+在基于对接口进行代理的情况下,Retrofit采用JDK中提供的Proxy及InvocationHandler来实现动态代理,其过程基本如下:
+
+```java
+  public <T> T create(final Class<T> service) {
+  	......
+    return (T) Proxy.newProxyInstance(service.getClassLoader(), new Class<?>[] { service },
+        new InvocationHandler() {
+          private final Platform platform = Platform.get();
+
+          @Override public Object invoke(Object proxy, Method method, Object... args)
+              throws Throwable {
+				......
+          }
+        });
+  }
+```
+
+> 使用JDK提供的Proxy来实现动态代理时,其支持接口的形式,如果需要直接对类进行代理它就无能为力了,此时可以选用cglib.
+
+### 你知道Retrofit采用了哪些设计模式?
+
+Retrofit作为设计的最佳典范,其内部使用了多种设计模式来保证整个架构的清晰,具体有:
+
+- 动态代理
+- 适配器
+- 门面模式
+- 策略模式
+- 方法工厂和抽象工厂
+
+在之前架构图的基础上,稍作调整整理了如下图:
+
+![Retrofit模式](https://i.imgur.com/bZiRw5Y.png)
+
+## 下载框架
 
 ### 如何实现一个支持断点续传的客户端?
 
@@ -1138,10 +1232,6 @@ layout/about.xml
 首先来看如何解决第一个问题?在请求下载该文件时,首先获取到下载文件的大小,并为之创建对应的RandomAccessFile.RandomAccessFile是Java中用来支持对文件进行随机读写的类.接下来根据下载文件的大小及线程数计算每个线程下载起始点及大小,然后每个线程在通过Http请求下载时在请求头中设置Range字段来指定要下载文件的起始点即可下线多线程分段下载.
 
 接下来就是要如何实现断点续传.实现断点相对比较简单只需要继续每个线程的已经下载的字节数即可.在下次任务启动时重新计算下载起始位置即可.
-
-### Android中如何实现长连接?
-
-所谓的长连接是客户端和服务端建立连接之后,不主动断开,以便双方互相发送数据.为了保持长连接需要实现心跳包机制,心跳包主要是为了解决NAT超时问题,客户端每个一段时间就主动向服务端发送一个数据,探测连接是否断开.服务端接受到客户端的心跳包之后会更新客户端在线状态,如果超过某个时间(根据实际情况动态调整,但存在一个最大值)仍然没有收到心跳包,可以认为客户端已经掉线,继而可以关掉该连接.此外,如果服务器通过TCP连接主动给客户端发消息出现写超时,可以直接认为对方掉线.
 
 ## 图片加载框架
 
@@ -1226,38 +1316,33 @@ ButterKnife采用编译时注解,在编译阶段读取源代码,扫描源代码�
 
 #### ARouter
 
-###内存检测
+## 内存/性能相关
 
-#### LeakCanary实现原理
+### LeakCanary实现原理
 
 LeakCanary是用来检测内存泄露的工具,其主要针对于Activity对象产生的内存泄露,当然我们也可以用它来检测其他对象.其实现原理主要涉及两个知识点:一是如何检测对象是否被正常回收,而是如何监控每个Activity的`onDestroy()`的执行以便来触发检测
 
 对于检测对象是否被回收可以通过WeakReference+ReferenceQueue的方式来实现,而监控Activity生命周期则可以通过ActivityLifecycleCallbacks来实现.实际上LeakCanary也正是如此实现的,在检测到Activity的`onDestroy()`后,将当期Activity对象封装在KeyedWeakReference(KeyedWeakReference是基于WeakReference实现的),并关联到ReferenceQueue,然后根据ReferenceQueue中元素的情况来判断是否已经被回收.如果检测到没有回收,那么会主动发起一次GC,并再次检测,如果还没被回收则会dump相关的内存信息进行分析,具体分析原理可见[haha](https://github.com/square/haha).
 
-### 其他
+## JSBridge相关
 
-####JSBridge实现原理
+# Gradle相关
 
-## Gradle相关
+## Gradle的Flavor能否配置sourceset？
 
-### Gradle的Flavor能否配置sourceset？
+## 写过Gradle脚本么?简述Gradle生命周期
 
-### 写过Gradle脚本么?简述Gradle生命周期
+Gradle构建过程中,生命周期主要分为三个阶段:
+
+- 初始化阶段: 负责判断有多少个模块参与构建,该阶段主要涉及settings.gradle.
+- 配置阶段: 负责对初始化阶段创建的模块完成配置,比如添加Task,修改Task的行为等
+- 执行阶段: 根据配置阶段生成的配置执行任务.在构建过程中,Gradle会发布一些事件通知,我们可以监听此类通知并额外做一些事情.
+
+## 了解Gradle Transform么?
+
+[Gradle Transform](http://tools.android.com/tech-docs/new-build-system/transform-api)是Android官方提供给开发者在项目构建阶段(即由class到dex转换期间)修改class文件的一套API,通常我们会用来实现字节码插桩,以及代码注入等工作.
 
 # 应用优化
-
-## 进程保活
-
-随着厂商对进程管理策略越来越严格,基本上可认为之前的保活方案成功率都不高.事实上,多数的APP不需要常驻,提高APP内容质量和性能才是应该发展的方向.
-
-- 利用 Activity 提升权限,屏幕锁屏时创建一个像素透明的Activity,使得系统误认为当前应用比较重要而减少被杀的可能性
-- 使用前台Service,对于像滴滴打车这种产品,在通知栏显示车辆信息就是如此
-- 监控系统广播,利用系统广播拉活,该方案对于8.0及以后机器可行性很小,再加上各种广播管控,可作为辅助方案
-- 利用第三方广播,有些应用比如微信基本上在各大手机都设置了白名单,如果你可以监控他们发出的广播就可以实现拉活了,但是可行性不高.因为目前稍微有点安全意识的都是采用应用内广播的.
-- 利用Service进行拉活,在其`onStartCommand()`返回Service.START_STICKY.但是如果该Service被频繁杀死,后续系统将不会拉起该Service,除此之外该Service所在进程很可能被禁止导致根本起不来
-- 利用Native进程进行拉活,利用fork机制在Native层创建一个子进程.主线程启动时创建文件锁并持有,当Native层的子进程检测到可以获得该文件锁时,意味着主进程已经挂了,此时就可以拉起该应用了.Android 5.0之后该方案基本作废,按组杀进程时,该应用对应的所有进程都会被杀死.
-- 利用JobScheduler机制拉活,在原生Android系统中还是比较靠谱的,但是由于国内基本都对其进行了管控,因此也不定靠谱.
-- 利用Android账号机制进行拉活.Android N后该方案失效.
 
 ## 如何压缩APK的大小?
 
@@ -1271,17 +1356,7 @@ LeakCanary是用来检测内存泄露的工具,其主要针对于Activity对象�
 
   善用Lint工具,检测无效和重复的资源文件,对于不用的文件及时删除.在使用图片之前,考虑再次进行压缩.很多时候给到的UI资源是很大的,此外根据实际情况来使用哪种图片:png还是jpeg.善用.9图片.如有必要,可以考虑webp.从适配的角度,有选择性的提供hdpi,xhdpi,xxhdpi的图片资源,优先提供xhdpi的图片,其他酌情处理,多复用少添加.能通过代码实现或者变化的图片,就通过代码去做.
 
-## 有哪些打渠道包的方案?如何提高打包速度?
-
-### 没有给权限如何定位，特定机型定位失败，如何解决
-
-### 谈谈你对Bitmap的理解，以及bitmap.recycle()的工作原理？
-
-### 如何高效的加载图片资源？
-
-### 现在需要遍历SD卡下所有的文件打印出后缀名为.txt文件名称，如何提高时间效率？
-
-### 如何统计应用冷启动时间
+## 如何统计应用冷启动时间?
 
 线下统计应用冷启动时间时除了使用高速相机外,还可以用以下命令:
 
@@ -1304,7 +1379,16 @@ Complete
 
 线上统计冷启动时间时,主要需要确定好在哪里记录起始时间.通常在`Application#attachBaseContext()`记录开始,在`Activity#onWindowFocusChanged()`记录结束时间.
 
-### 性能优化如何分析systrace？
+## 如何统计帧率?
+
+帧率统计有三种方法,对于已经root的设备可以通过hook住Surfaceflinger中eglSwapBuffers函数;另外也可以通过使用Choreographer中的FrameCallback接口,该接口的`doFrame()`在Choreographer每次接受到VSync信号后会被触发.
+
+当然可以使用以下两个adb命令:
+
+- `adb shell dumpsys gfxinfo <package_name>` : gfxinfo会记录最近128帧的绘制时间,如果每帧不同阶段的时间累加和不超过16.6ms,就可以认为是流畅的.需要注意的是在界面静止不同,或应用内部没有刷新界面的情况下,其值输出为0
+- `adb shell dumpsys SurfaceFlinger --latency <window_activity>` :实际记录了最近127帧的数据,静止不动时,输出的将是上一帧的时间.
+
+## 性能优化如何分析systrace？
 
 
 
